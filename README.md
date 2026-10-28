@@ -2,6 +2,24 @@
 
 App iPhone native (SwiftUI, iOS 26+) pour compter ses calories, avec le design **Liquid Glass**.
 
+## 📲 Installer
+
+**[👉 Page d'installation (bouton « Installer avec AltStore »)](https://sucrayyyy.github.io/assiette/)**
+
+Ou dans AltStore › Sources › **+**, colle cette adresse :
+
+```
+https://raw.githubusercontent.com/Sucrayyyy/assiette/main/docs/altstore.json
+```
+
+Fichier direct : [Assiette.ipa](https://github.com/Sucrayyyy/assiette/releases/download/v1.0/Assiette.ipa)
+
+<p>
+  <img src="docs/screenshots/3-accueil.png" width="200">
+  <img src="docs/screenshots/2-objectifs.png" width="200">
+  <img src="docs/screenshots/4-progres.png" width="200">
+</p>
+
 - **Accueil** : « Bonjour Théo », anneaux calories / protéines / fibres, glucides et lipides, semaine en un coup d'œil, série de jours 🔥 et petit message de coaching.
 - **Besoins sur mesure** : formule de Mifflin-St Jeor (sexe, âge, taille, poids, activité, objectif), objectifs modifiables à la main.
 - **Aliments** : aliments de base intégrés + **Open Food Facts** (toutes les marques vendues en France) + **scan de code-barres**.

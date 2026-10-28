@@ -1,0 +1,45 @@
+{
+  "name": "Assiette",
+  "identifier": "fr.assiette.source",
+  "subtitle": "Compte tes calories avec un scan IA",
+  "description": "Source AltStore officielle de l'app Assiette.",
+  "iconURL": "https://raw.githubusercontent.com/Sucrayyyy/assiette/main/docs/icon.png",
+  "website": "https://sucrayyyy.github.io/assiette/",
+  "tintColor": "#22A06B",
+  "apps": [
+    {
+      "name": "Assiette",
+      "bundleIdentifier": "fr.assiette.app",
+      "developerName": "Theo",
+      "subtitle": "Compte tes calories avec un scan IA",
+      "localizedDescription": "Prends ton plat en photo : l'IA détecte chaque ingrédient, estime les grammes et remplit les calories, protéines et fibres. Tu ajustes en un geste.\n\n• Accueil « Bonjour » avec tes anneaux calories, protéines et fibres\n• Besoins calculés selon ton poids, ta taille et ton activité\n• Tous les produits vendus en France (Open Food Facts) et scan de code-barres\n• Progrès de la semaine et courbe de poids\n• Design Liquid Glass\n\nLe scan IA demande une clé API Anthropic, à coller dans Profil › Scan IA.",
+      "iconURL": "https://raw.githubusercontent.com/Sucrayyyy/assiette/main/docs/icon.png",
+      "tintColor": "#22A06B",
+      "category": "lifestyle",
+      "screenshots": [
+        "https://raw.githubusercontent.com/Sucrayyyy/assiette/main/docs/screenshots/1-bienvenue.png",
+        "https://raw.githubusercontent.com/Sucrayyyy/assiette/main/docs/screenshots/3-accueil.png",
+        "https://raw.githubusercontent.com/Sucrayyyy/assiette/main/docs/screenshots/2-objectifs.png",
+        "https://raw.githubusercontent.com/Sucrayyyy/assiette/main/docs/screenshots/4-progres.png"
+      ],
+      "versions": [
+        {
+          "version": "1.0",
+          "buildVersion": "1",
+          "date": "2026-10-28",
+          "localizedDescription": "Première version.",
+          "downloadURL": "https://github.com/Sucrayyyy/assiette/releases/download/v1.0/Assiette.ipa",
+          "size": 1099833,
+          "minOSVersion": "26.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSCameraUsageDescription": "Assiette utilise l'appareil photo pour scanner tes plats et les codes-barres."
+        }
+      }
+    }
+  ],
+  "news": []
+}
