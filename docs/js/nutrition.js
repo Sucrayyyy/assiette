@@ -3,24 +3,24 @@ import { state } from './store.js';
 export const ZERO = { kcal: 0, protein: 0, carbs: 0, fat: 0, fiber: 0 };
 
 export const ACTIVITIES = [
-  { key: 'sedentaire', label: 'Sédentaire', detail: 'Bureau, peu ou pas de sport', icon: '🛋️', factor: 1.2 },
-  { key: 'leger', label: 'Légèrement actif', detail: 'Sport 1 à 3 fois par semaine', icon: '🚶', factor: 1.375 },
-  { key: 'modere', label: 'Modérément actif', detail: 'Sport 3 à 5 fois par semaine', icon: '🏃', factor: 1.55 },
-  { key: 'actif', label: 'Très actif', detail: 'Sport 6 à 7 fois par semaine', icon: '🏋️', factor: 1.725 },
-  { key: 'tres_actif', label: 'Extrêmement actif', detail: 'Métier physique et sport intense', icon: '🔥', factor: 1.9 },
+  { key: 'sedentaire', label: 'Sédentaire', detail: 'Bureau, peu ou pas de sport', level: 1, factor: 1.2 },
+  { key: 'leger', label: 'Légèrement actif', detail: 'Sport 1 à 3 fois par semaine', level: 2, factor: 1.375 },
+  { key: 'modere', label: 'Modérément actif', detail: 'Sport 3 à 5 fois par semaine', level: 3, factor: 1.55 },
+  { key: 'actif', label: 'Très actif', detail: 'Sport 6 à 7 fois par semaine', level: 4, factor: 1.725 },
+  { key: 'tres_actif', label: 'Extrêmement actif', detail: 'Métier physique et sport intense', level: 5, factor: 1.9 },
 ];
 
 export const GOALS = [
-  { key: 'perte', label: 'Perdre du poids', detail: 'Environ -0,5 kg par semaine', icon: '↘︎' },
-  { key: 'maintien', label: 'Garder mon poids', detail: "Manger à l'équilibre", icon: '＝' },
-  { key: 'prise', label: 'Prendre du muscle', detail: 'Environ +0,25 kg par semaine', icon: '↗︎' },
+  { key: 'perte', label: 'Perdre du poids', detail: 'Environ -0,5 kg par semaine', icon: 'trendDown' },
+  { key: 'maintien', label: 'Garder mon poids', detail: "Manger à l'équilibre", icon: 'equal' },
+  { key: 'prise', label: 'Prendre du muscle', detail: 'Environ +0,25 kg par semaine', icon: 'trendUp' },
 ];
 
 export const MEALS = [
-  { key: 'petit_dej', label: 'Petit-déjeuner', short: 'Petit-déj', icon: '☕️' },
-  { key: 'dejeuner', label: 'Déjeuner', short: 'Déjeuner', icon: '🍽️' },
-  { key: 'collation', label: 'Collation', short: 'Collation', icon: '🥕' },
-  { key: 'diner', label: 'Dîner', short: 'Dîner', icon: '🌙' },
+  { key: 'petit_dej', label: 'Petit-déjeuner', short: 'Petit-déj', icon: 'coffee' },
+  { key: 'dejeuner', label: 'Déjeuner', short: 'Déjeuner', icon: 'utensils' },
+  { key: 'collation', label: 'Collation', short: 'Collation', icon: 'apple' },
+  { key: 'diner', label: 'Dîner', short: 'Dîner', icon: 'moon' },
 ];
 
 /** Métabolisme de base, formule de Mifflin-St Jeor. */
@@ -134,16 +134,16 @@ export function coachMessage(t, g, hasEntries, isToday) {
   if (!hasEntries) {
     if (!isToday) return 'Rien de noté ce jour-là.';
     return new Date().getHours() < 11
-      ? 'Nouvelle journée. Commence par scanner ton petit-déj 📸'
-      : "Rien de noté pour l'instant. Un scan et c'est parti ✨";
+      ? 'Nouvelle journée. Commence par scanner ton petit-déj.'
+      : "Rien de noté pour l'instant. Un scan et c'est parti.";
   }
   const proteinLeft = g.protein - t.protein;
   const fiberLeft = g.fiber - t.fiber;
-  if (t.kcal > g.kcal * 1.05) return `Objectif dépassé de ${Math.round(t.kcal - g.kcal)} kcal. Pas grave, demain est un autre jour 🌱`;
-  if (proteinLeft <= 0 && fiberLeft <= 0) return "Protéines et fibres au top aujourd'hui 🎉";
-  if (proteinLeft > 20) return `Encore ${Math.round(proteinLeft)} g de protéines : un skyr ou un blanc de poulet et c'est plié 💪`;
-  if (fiberLeft > 8) return `Il te manque ${Math.round(fiberLeft)} g de fibres : légumes, lentilles ou une pomme 🍎`;
-  return 'Tu es pile dans le rythme, continue comme ça ✨';
+  if (t.kcal > g.kcal * 1.05) return `Objectif dépassé de ${Math.round(t.kcal - g.kcal)} kcal. Pas grave, demain est un autre jour.`;
+  if (proteinLeft <= 0 && fiberLeft <= 0) return "Protéines et fibres au top aujourd'hui, bravo !";
+  if (proteinLeft > 20) return `Encore ${Math.round(proteinLeft)} g de protéines : un skyr ou un blanc de poulet et c'est plié.`;
+  if (fiberLeft > 8) return `Il te manque ${Math.round(fiberLeft)} g de fibres : légumes, lentilles ou une pomme.`;
+  return 'Tu es pile dans le rythme, continue comme ça.';
 }
 
 const nf0 = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 0 });

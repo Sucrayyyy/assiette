@@ -1,6 +1,8 @@
 import { state, save, uid } from './store.js';
 import { n0, n1 } from './nutrition.js';
-import { esc, icon, toast } from './ui.js';
+import { esc, icon, toast, animateCounts, confetti } from './ui.js';
+import { rankBadge } from './badges.js';
+import { exerciseFigure } from './figure.js';
 import { bodyDiagram } from './body.js';
 import {
   MUSCLES, muscleLabel, PROGRAMS, RANKS, rankFor, LIFTS, LEVELS, strengthLevel,
@@ -11,7 +13,7 @@ const $session = document.getElementById('session');
 const $wsheet = document.getElementById('wsheet');
 let rerenderApp = () => {};
 
-const wui = { section: 'seances', query: '', muscle: '', equipment: '', sheet: null, rest: null, sessionOpen: false };
+const wui = { section: 'seances', prevSection: 'seances', query: '', muscle: '', equipment: '', sheet: null, rest: null, sessionOpen: false, justDone: '' };
 let ticker = 0;
 let shownSheet = null;
 
@@ -120,28 +122,29 @@ function weekStats() {
 export function workoutTabView() {
   if (!libraryReady()) loadLibrary().then(() => rerenderApp()).catch(() => {});
   const xp = totalXp();
-  const { rank } = rankFor(xp);
+  const { rank, index } = rankFor(xp);
   const sections = [['seances', 'Séances'], ['exercices', 'Exercices'], ['recup', 'Récup'], ['classement', 'Classement']];
+  const pos = (key) => sections.findIndex(([k]) => k === key);
   const views = { seances: sessionsSection, exercices: exercisesSection, recup: recoverySection, classement: rankingSection };
   return `<main class="screen">
-    <div class="header"><div><h1>Muscu</h1><div class="subtitle">${rank.emoji} ${rank.name} · ${n0(xp)} XP</div></div></div>
-    <div class="seg glass">${sections.map(([k, l]) => `<button class="${wui.section === k ? 'active' : ''}" data-wact="section" data-s="${k}">${l}</button>`).join('')}</div>
+    <div class="header"><div><h1>Muscu</h1><div class="subtitle rank-inline">${rankBadge(index, 22, { shine: false })}${rank.name} · ${n0(xp)} XP</div></div></div>
+    <div class="seg glass"><span class="seg-indicator" style="--from:${pos(wui.prevSection)};--to:${pos(wui.section)}"></span>${sections.map(([k, l]) => `<button class="${wui.section === k ? 'active' : ''}" data-wact="section" data-s="${k}">${l}</button>`).join('')}</div>
     ${views[wui.section]()}
   </main>`;
 }
 
 function rankCard() {
   const xp = totalXp();
-  const { rank, next, progress } = rankFor(xp);
+  const { rank, index, next, progress } = rankFor(xp);
   const week = weekStats();
   return `<section class="card glass rank-card" style="--rank:${rank.color}">
-    <div class="row"><span class="rank-emoji">${rank.emoji}</span>
-      <div class="spacer"><b class="rank-name">${rank.name}</b><div class="muted small">${n0(xp)} XP${next ? ` · encore ${n0(next.xp - xp)} XP pour ${next.emoji} ${next.name}` : ' · rang maximum'}</div></div></div>
+    <div class="row">${rankBadge(index, 58)}
+      <div class="spacer"><b class="rank-name">${rank.name}</b><div class="muted small"><span data-count="${Math.round(xp)}">${n0(xp)}</span> XP${next ? ` · encore ${n0(next.xp - xp)} XP pour ${next.name}` : ' · rang maximum'}</div></div></div>
     <div class="bar-track" style="--c:${rank.color};margin-top:12px"><div class="bar-fill" style="width:${Math.round(progress * 100)}%"></div></div>
     <div class="mini-stats">
-      <div><b>${week.count}</b><span>séances (7 j)</span></div>
-      <div><b>${n0(week.volume / 1000)} t</b><span>soulevées (7 j)</span></div>
-      <div><b>${week.sets}</b><span>séries (7 j)</span></div>
+      <div><b data-count="${week.count}">${week.count}</b><span>séances (7 j)</span></div>
+      <div><b data-count="${Math.round(week.volume)}" data-suffix=" kg">${n0(week.volume)} kg</b><span>soulevés (7 j)</span></div>
+      <div><b data-count="${week.sets}">${week.sets}</b><span>séries (7 j)</span></div>
     </div>
   </section>`;
 }
@@ -151,7 +154,7 @@ function sessionsSection() {
   const recent = [...state.workouts].sort((a, b) => b.end - a.end).slice(0, 8);
   return `${rankCard()}
     ${state.activeWorkout
-      ? `<button class="cta glass tinted" data-wact="open-session">${icon.dumbbell}<div class="spacer"><b>Reprendre ma séance</b><span>${esc(state.activeWorkout.name)} · <span data-elapsed>${clock(Date.now() - state.activeWorkout.start)}</span></span></div>${icon.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6')}</button>`
+      ? `<button class="cta glass tinted" data-wact="open-session">${icon.dumbbell}<div class="spacer"><b>Reprendre ma séance</b><span>${esc(state.activeWorkout.name)} · <span data-elapsed>${clock(Date.now() - state.activeWorkout.start)}</span></span></div>${icon.chevron}</button>`
       : `<button class="cta glass tinted" data-wact="start-free">${icon.plus}<div class="spacer"><b>Séance libre</b><span>Ajoute tes exercices au fur et à mesure</span></div>${icon.dumbbell}</button>`}
     <div class="row"><h2 class="spacer">Mes séances</h2><button class="pill glass" data-wact="routine-new">${icon.plus} Créer</button></div>
     ${routines.length
@@ -164,12 +167,21 @@ function sessionsSection() {
       : '<p class="muted small" style="margin:0">Crée tes propres séances : choisis tes exercices, tes séries et tes répétitions.</p>'}
     <h2>Programmes</h2>
     <div class="programs">${PROGRAMS.map((p) => `<button class="program glass" data-wact="start-program" data-id="${p.id}">
-        <span class="emoji">${p.emoji}</span><b>${esc(p.name)}</b><small>${esc(p.detail)}</small><small class="muted">${p.exercises.length} exercices</small></button>`).join('')}</div>
+        <span class="prog-art">${programFigure(p)}</span><b>${esc(p.name)}</b><small>${esc(p.detail)}</small><small class="muted">${p.exercises.length} exercices</small></button>`).join('')}</div>
     ${recent.length ? `<h2>Historique</h2><div class="list glass">${recent.map((w) => `<button class="food" data-wact="workout-detail" data-id="${w.id}">
-        <span class="ph">${icon.dumbbell}</span>
-        <div class="info"><div class="name">${esc(w.name)}${w.prs.length ? ' 🏆' : ''}</div>
+        <span class="icon-chip">${icon.dumbbell}</span>
+        <div class="info"><div class="name">${esc(w.name)}${w.prs.length ? `<span class="pr-mark">${icon.trophy}</span>` : ''}</div>
           <div class="meta">${ago(w.end)} · ${duration(w.end - w.start)} · ${n0(w.volume)} kg · ${w.sets} séries</div></div>
         <span class="num">+${w.xp} XP</span></button>`).join('')}</div>` : ''}`;
+}
+
+function figureFor(exId, size, still = false, crop = false) {
+  const ex = exerciseById(exId);
+  return ex ? exerciseFigure(ex, { size, still, crop }) : icon.dumbbell;
+}
+
+function programFigure(program) {
+  return libraryReady() ? figureFor(program.exercises[0][0], 92) : icon.dumbbell;
 }
 
 function musclesSummary(exercises) {
@@ -204,9 +216,9 @@ function exerciseResults(filters, act) {
 
 function exerciseRow(ex, act) {
   return `<button class="food" data-wact="${act}" data-id="${esc(ex.id)}">
-    ${ex.img ? `<img src="${esc(ex.img)}" alt="" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'ph',textContent:'💪'}))">` : '<span class="ph">💪</span>'}
+    <span class="fig-thumb">${exerciseFigure(ex, { still: true, crop: true, size: 54 })}</span>
     <div class="info"><div class="name">${esc(ex.name)}</div><div class="meta">${esc([...ex.p.map(muscleLabel), ex.eq].join(' · '))}</div></div>
-    <span class="add">${act === 'pick-ex' ? icon.plus : icon.back.replace('m15 18-6-6 6-6', 'm9 18 6-6-6-6')}</span>
+    <span class="add">${act === 'pick-ex' ? icon.plus : icon.chevron}</span>
   </button>`;
 }
 
@@ -220,7 +232,7 @@ function recoverySection() {
       <div class="legend-row"><span><i style="background:#22a06b"></i>Récupéré</span><span><i style="background:#f2a93b"></i>En cours</span><span><i style="background:#ff5e62"></i>Fatigué</span></div></section>
     <div class="coach glass"><span class="badge">${icon.leaf}</span><span>${tired.length
       ? `Laisse souffler : ${esc(tired.join(', '))}. Tu peux entraîner ${esc(ready.slice(0, 4).join(', ') || 'autre chose')}.`
-      : trained.length ? 'Tout est récupéré ou presque, fonce 💪' : 'Fais ta première séance pour suivre la récupération de tes muscles.'}</span></div>
+      : trained.length ? 'Tout est récupéré ou presque, fonce.' : 'Fais ta première séance pour suivre la récupération de tes muscles.'}</span></div>
     <section class="card glass" style="display:flex;flex-direction:column;gap:12px">
       ${Object.entries(rec).sort((a, b) => a[1].pct - b[1].pct).map(([m, r]) => `<div>
         <div class="bar-top"><span>${muscleLabel(m)}</span><b>${r.last ? `${r.pct} % · ${ago(r.last)}` : 'Pas entraîné cette semaine'}</b></div>
@@ -239,8 +251,8 @@ function rankingSection() {
     <section class="card glass" style="display:flex;flex-direction:column;gap:10px">
       <h2>Amis</h2>
       ${board.map((f, i) => {
-        const r = rankFor(f.xp).rank;
-        return `<div class="row friend ${f.me ? 'me' : ''}"><b class="pos">${i + 1}</b><span class="rank-emoji small">${r.emoji}</span>
+        const { rank: r, index: ri } = rankFor(f.xp);
+        return `<div class="row friend ${f.me ? 'me' : ''}"><b class="pos">${i + 1}</b>${rankBadge(ri, 36, { shine: false })}
           <div class="spacer"><b>${esc(f.n)}${f.me ? ' (toi)' : ''}</b><div class="muted small">${r.name} · ${n0(f.xp)} XP · ${f.w} séances · ${n0((f.vol7 || 0) / 1000)} t cette semaine</div></div>
           ${f.me ? '' : `<button class="round glass" data-wact="friend-remove" data-id="${esc(f.id)}" aria-label="Retirer">${icon.x}</button>`}</div>`;
       }).join('')}
@@ -261,7 +273,7 @@ function rankingSection() {
     </section>
     <section class="card glass" style="display:flex;flex-direction:column;gap:8px">
       <h2>Rangs</h2>
-      ${RANKS.map((r) => `<div class="row ${r.name === rank.name ? 'rank-current' : ''}"><span class="rank-emoji small">${r.emoji}</span><b class="spacer">${r.name}</b><span class="muted small">${n0(r.xp)} XP</span></div>`).join('')}
+      ${RANKS.map((r, ri) => `<div class="row ${r.name === rank.name ? 'rank-current' : ''}">${rankBadge(ri, 34, { shine: r.name === rank.name })}<b class="spacer">${r.name}</b><span class="muted small">${n0(r.xp)} XP</span></div>`).join('')}
       <p class="muted small" style="margin:0">Gagne de l'XP à chaque séance : séries validées, volume soulevé et records battus.</p>
     </section>`;
 }
@@ -332,7 +344,7 @@ function renderSession(enter = false) {
   const scrollTop = $session.querySelector('.layer')?.scrollTop || 0;
   $session.innerHTML = `<div class="layer ${enter ? 'enter' : ''}">
     <header class="session-head glass">
-      <button class="round glass" data-wact="minimize" aria-label="Réduire">${icon.back.replace('m15 18-6-6 6-6', 'm6 9 6 6 6-6')}</button>
+      <button class="round glass" data-wact="minimize" aria-label="Réduire">${icon.down}</button>
       <div class="spacer"><input class="dish-input" data-wname value="${esc(a.name)}" style="font-size:18px"><small class="muted" data-elapsed>${clock(Date.now() - a.start)}</small></div>
       <button class="pill btn-primary" data-wact="finish">Terminer</button>
     </header>
@@ -350,15 +362,15 @@ function renderSession(enter = false) {
 function exerciseCard(e, i) {
   const last = lastPerformance(e.exId);
   return `<section class="ex-card glass">
-    <div class="row"><button class="spacer ex-title" data-wact="exercise-detail" data-id="${esc(e.exId)}">${esc(e.name)}</button>
+    <div class="row"><span class="fig-mini">${figureFor(e.exId, 52, false, true)}</span><button class="spacer ex-title" data-wact="exercise-detail" data-id="${esc(e.exId)}">${esc(e.name)}</button>
       <button class="round glass" data-wact="ex-remove" data-i="${i}" aria-label="Retirer">${icon.x}</button></div>
     <div class="chips">${e.p.map((m) => `<span class="chip" style="--c:#ff5e62">${muscleLabel(m)}</span>`).join('')}${e.s.slice(0, 3).map((m) => `<span class="chip" style="--c:#f2a93b">${muscleLabel(m)}</span>`).join('')}</div>
-    <div class="hint">↗ ${esc(overloadHint(e.exId))}</div>
+    <div class="hint">${icon.arrowUpRight}<span>${esc(overloadHint(e.exId))}</span></div>
     <div class="set-table">
       <div class="set-row head"><span>Série</span><span>Précédent</span><span>kg</span><span>Reps</span><span></span></div>
       ${e.sets.map((s, j) => {
         const prev = last?.sets[j];
-        return `<div class="set-row ${s.done ? 'done' : ''}">
+        return `<div class="set-row ${s.done ? 'done' : ''} ${wui.justDone === `${i}:${j}` ? 'pop' : ''}">
           <span class="set-n">${j + 1}</span>
           <span class="prev">${prev ? setLabel(prev) : '—'}</span>
           <input data-wset="${i}:${j}:w" inputmode="decimal" value="${esc(s.w)}" placeholder="${prev && num(prev.w) > 0 ? n1(num(prev.w)) : '0'}">
@@ -394,7 +406,7 @@ function startTicker() {
       if (left <= 0) {
         wui.rest = null;
         navigator.vibrate?.([200, 100, 200]);
-        toast('Repos terminé, à toi 💪');
+        toast('Repos terminé, à toi', 'timer');
         renderSession();
       } else {
         const el = document.querySelector('[data-rest]');
@@ -441,7 +453,8 @@ function finishSession() {
   wui.rest = null;
   wui.sessionOpen = false;
   renderSession();
-  openWSheet({ type: 'summary', id: workout.id, xpBefore });
+  const rankedUp = rankFor(xpBefore).index !== rankFor(xpBefore + workout.xp).index;
+  openWSheet({ type: 'summary', id: workout.id, xpBefore, celebrate: prs.length > 0 || rankedUp });
   rerenderApp();
   navigator.vibrate?.([30, 60, 30]);
 }
@@ -483,6 +496,10 @@ function renderWSheet() {
   const tall = sh.type === 'picker' || sh.type === 'routine' || sh.type === 'exercise';
   $wsheet.innerHTML = `<div class="backdrop ${enter}" data-wact="close-sheet"></div>
     <div class="sheet ${tall ? 'tall' : ''} ${enter}"><div class="grabber"></div>${views[sh.type](sh)}</div>`;
+  if (enter) {
+    animateCounts($wsheet);
+    if (sh.type === 'summary' && sh.celebrate) setTimeout(confetti, 250);
+  }
 }
 
 const sheetHead = (title) => `<div class="sheet-head"><h2>${title}</h2><button class="round glass" data-wact="close-sheet" aria-label="Fermer">${icon.x}</button></div>`;
@@ -498,7 +515,9 @@ function exerciseSheet(sh) {
   const level = lift && best && p ? strengthLevel(lift, best, p.weightKg, p.sex) : null;
   return `${sheetHead(esc(ex.name))}
     ${ex.fr && ex.en !== ex.fr ? `<div class="muted small" style="margin-top:-10px">${esc(ex.en)}</div>` : ''}
-    ${ex.img ? `<img class="ex-photo" src="${esc(ex.img)}" alt="" onerror="this.remove()">` : ''}
+    <div class="fig-hero">${exerciseFigure(ex, { size: 210, crop: true })}</div>
+    ${ex.img ? `<details class="photo-toggle"><summary class="link">${icon.photo} Voir une photo réelle</summary>
+      <img class="ex-photo" src="${esc(ex.img)}" alt="" loading="lazy" onerror="this.closest('details').remove()"></details>` : ''}
     <div class="chips"><span class="chip" style="--c:var(--accent)">${esc(ex.eq)}</span>
       <span class="chip" style="--c:#4D7CFE">${['', 'Débutant', 'Intermédiaire', 'Avancé'][ex.lv] || 'Tous niveaux'}</span></div>
     <section class="card glass body-card">${bodyDiagram(colors)}
@@ -570,19 +589,19 @@ function summarySheet(sh) {
   const after = rankFor(sh.xpBefore + w.xp);
   const rankedUp = before.rank.name !== after.rank.name;
   return `<div class="ob-body center enter" style="gap:12px">
-      <div style="font-size:56px">${rankedUp ? after.rank.emoji : '✅'}</div>
+      ${rankedUp ? `<span class="badge-pop">${rankBadge(after.index, 96)}</span>` : `<span class="check-burst">${icon.check}</span>`}
       <h1 style="font-size:28px">${rankedUp ? `Nouveau rang : ${after.rank.name} !` : 'Séance terminée !'}</h1>
       <p class="muted" style="margin:0">${esc(w.name)}</p>
     </div>
     <div class="mini-stats">
       <div><b>${duration(w.end - w.start)}</b><span>durée</span></div>
-      <div><b>${n0(w.volume)} kg</b><span>soulevés</span></div>
-      <div><b>${w.sets}</b><span>séries</span></div>
+      <div><b data-count="${Math.round(w.volume)}" data-suffix=" kg">${n0(w.volume)} kg</b><span>soulevés</span></div>
+      <div><b data-count="${w.sets}">${w.sets}</b><span>séries</span></div>
     </div>
-    ${w.prs.length ? `<section class="card glass"><b>🏆 ${w.prs.length > 1 ? 'Nouveaux records' : 'Nouveau record'}</b>
+    ${w.prs.length ? `<section class="card glass pr-card"><b class="row"><span class="icon-chip">${icon.trophy}</span>${w.prs.length > 1 ? 'Nouveaux records' : 'Nouveau record'}</b>
       <p class="muted" style="margin:6px 0 0">${esc(w.prs.join(', '))}</p></section>` : ''}
     <section class="card glass rank-card" style="--rank:${after.rank.color}">
-      <div class="row"><span class="rank-emoji">${after.rank.emoji}</span><div class="spacer"><b>+${w.xp} XP</b>
+      <div class="row">${rankBadge(after.index, 52)}<div class="spacer"><b>+<span data-count="${w.xp}">${w.xp}</span> XP</b>
         <div class="muted small">${after.rank.name} · ${n0(sh.xpBefore + w.xp)} XP</div></div></div>
       <div class="bar-track" style="--c:${after.rank.color};margin-top:12px"><div class="bar-fill" style="width:${Math.round(after.progress * 100)}%"></div></div>
     </section>
@@ -598,7 +617,7 @@ function workoutSheet(sh) {
     <div class="muted small" style="margin-top:-10px">${date} · ${duration(w.end - w.start)}</div>
     <div class="mini-stats" style="margin:0"><div><b>${n0(w.volume)} kg</b><span>soulevés</span></div><div><b>${w.sets}</b><span>séries</span></div><div><b>+${w.xp}</b><span>XP</span></div></div>
     ${w.exercises.map((e) => `<section class="card glass" style="padding:14px">
-      <button class="ex-title" data-wact="exercise-detail" data-id="${esc(e.exId)}">${esc(e.name)}${w.prs.includes(e.name) ? ' 🏆' : ''}</button>
+      <button class="ex-title" data-wact="exercise-detail" data-id="${esc(e.exId)}">${esc(e.name)}${w.prs.includes(e.name) ? `<span class="pr-mark">${icon.trophy}</span>` : ''}</button>
       <p class="muted small" style="margin:6px 0 0">${esc(e.sets.map(setLabel).join(' · '))}</p></section>`).join('')}
     <button class="btn glass" data-wact="repeat-workout" data-id="${w.id}">${icon.play} Refaire cette séance</button>
     <button class="btn glass btn-danger" data-wact="workout-delete" data-id="${w.id}">${icon.trash} Supprimer</button>`;
@@ -637,11 +656,11 @@ function addFriendFromText(text) {
     return toast('Lien invalide');
   }
   if (!card?.id || typeof card.n !== 'string' || typeof card.xp !== 'number') return toast('Lien invalide');
-  if (card.id === state.userId) return toast("C'est ton propre lien 🙂");
+  if (card.id === state.userId) return toast("C'est ton propre lien", 'info');
   const friend = { id: String(card.id).slice(0, 40), n: card.n.slice(0, 30), xp: Math.max(0, card.xp), w: Number(card.w) || 0, vol7: Number(card.vol7) || 0, t: Number(card.t) || Date.now() };
   state.friends = [friend, ...state.friends.filter((f) => f.id !== friend.id)];
   save();
-  toast(`${friend.n} ajouté à tes amis 🤝`);
+  toast(`${friend.n} ajouté à tes amis`, 'users');
 }
 
 function handleFriendLink() {
@@ -655,7 +674,7 @@ async function shareProfile() {
   const url = `${location.origin}${location.pathname}#ami=${encodeCard(myCard())}`;
   try {
     if (navigator.share) {
-      await navigator.share({ title: 'Assiette', text: `Ajoute-moi sur Assiette 💪 (${rankFor(totalXp()).rank.name})`, url });
+      await navigator.share({ title: 'Assiette', text: `Ajoute-moi sur Assiette (rang ${rankFor(totalXp()).rank.name})`, url });
       return;
     }
   } catch (e) {
@@ -688,6 +707,7 @@ document.addEventListener('click', async (e) => {
 
   switch (el.dataset.wact) {
     case 'section':
+      wui.prevSection = wui.section;
       wui.section = el.dataset.s;
       rerenderApp();
       break;
@@ -749,10 +769,12 @@ document.addEventListener('click', async (e) => {
         if (!s.w && prev && num(prev.w) > 0) s.w = String(prev.w);
         const seconds = num(s.w) > 0 ? 90 : 60;
         wui.rest = { end: Date.now() + seconds * 1000 };
+        wui.justDone = `${i}:${j}`;
         navigator.vibrate?.(15);
       }
       save();
       renderSession();
+      wui.justDone = '';
       break;
     }
     case 'set-add': {
@@ -841,7 +863,7 @@ document.addEventListener('click', async (e) => {
       save();
       closeWSheet();
       rerenderApp();
-      toast('Séance enregistrée ✓');
+      toast('Séance enregistrée');
       break;
     }
     case 'routine-delete':
@@ -861,7 +883,7 @@ document.addEventListener('click', async (e) => {
       save();
       closeWSheet();
       rerenderApp();
-      toast('Ajoutée à tes séances ✓');
+      toast('Ajoutée à tes séances');
       break;
     }
 

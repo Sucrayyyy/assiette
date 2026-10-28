@@ -25,64 +25,64 @@ export const muscleLabel = (key) => MUSCLES[key]?.label || key;
 // Séances toutes prêtes : [exercice, séries, répétitions].
 export const PROGRAMS = [
   {
-    id: 'full-body', emoji: '🔰', name: 'Full body débutant', detail: 'Tout le corps, 3 fois par semaine',
+    id: 'full-body', name: 'Full body débutant', detail: 'Tout le corps, 3 fois par semaine',
     exercises: [
       ['f-Barbell_Squat', 3, 8], ['f-Barbell_Bench_Press_-_Medium_Grip', 3, 8], ['f-Bent_Over_Barbell_Row', 3, 8],
       ['f-Dumbbell_Shoulder_Press', 3, 10], ['f-Romanian_Deadlift', 3, 10], ['f-Plank', 3, 45],
     ],
   },
   {
-    id: 'push', emoji: '💥', name: 'Push', detail: 'Pectoraux, épaules, triceps',
+    id: 'push', name: 'Push', detail: 'Pectoraux, épaules, triceps',
     exercises: [
       ['f-Barbell_Bench_Press_-_Medium_Grip', 4, 6], ['f-Incline_Dumbbell_Press', 3, 10], ['f-Standing_Military_Press', 3, 8],
       ['f-Side_Lateral_Raise', 3, 12], ['f-Triceps_Pushdown', 3, 12], ['f-Dips_-_Triceps_Version', 3, 10],
     ],
   },
   {
-    id: 'pull', emoji: '🧲', name: 'Pull', detail: 'Dos et biceps',
+    id: 'pull', name: 'Pull', detail: 'Dos et biceps',
     exercises: [
       ['f-Pullups', 4, 6], ['f-Bent_Over_Barbell_Row', 4, 8], ['f-Wide-Grip_Lat_Pulldown', 3, 10],
       ['f-Seated_Cable_Rows', 3, 10], ['f-Face_Pull', 3, 15], ['f-Dumbbell_Bicep_Curl', 3, 12], ['f-Hammer_Curls', 3, 12],
     ],
   },
   {
-    id: 'legs', emoji: '🦵', name: 'Legs', detail: 'Quadriceps, ischios, fessiers, mollets',
+    id: 'legs', name: 'Legs', detail: 'Quadriceps, ischios, fessiers, mollets',
     exercises: [
       ['f-Barbell_Squat', 4, 6], ['f-Leg_Press', 3, 10], ['f-Romanian_Deadlift', 3, 8],
       ['f-Lying_Leg_Curls', 3, 12], ['f-Leg_Extensions', 3, 12], ['f-Standing_Calf_Raises', 4, 15],
     ],
   },
   {
-    id: 'upper', emoji: '🏋️', name: 'Haut du corps', detail: 'Pecs, dos, épaules, bras',
+    id: 'upper', name: 'Haut du corps', detail: 'Pecs, dos, épaules, bras',
     exercises: [
       ['f-Barbell_Bench_Press_-_Medium_Grip', 4, 8], ['f-One-Arm_Dumbbell_Row', 3, 10], ['f-Seated_Dumbbell_Press', 3, 10],
       ['f-Pullups', 3, 8], ['f-Barbell_Curl', 3, 10], ['f-Lying_Triceps_Press', 3, 10],
     ],
   },
   {
-    id: 'lower', emoji: '🍑', name: 'Bas du corps', detail: 'Jambes et fessiers',
+    id: 'lower', name: 'Bas du corps', detail: 'Jambes et fessiers',
     exercises: [
       ['f-Barbell_Squat', 4, 8], ['f-Barbell_Deadlift', 3, 5], ['f-Dumbbell_Lunges', 3, 10],
       ['f-Barbell_Hip_Thrust', 3, 10], ['f-Lying_Leg_Curls', 3, 12], ['f-Seated_Calf_Raise', 3, 15],
     ],
   },
   {
-    id: 'force-a', emoji: '🏆', name: 'Force 5×5 · A', detail: 'Squat, développé couché, rowing',
+    id: 'force-a', name: 'Force 5×5 · A', detail: 'Squat, développé couché, rowing',
     exercises: [['f-Barbell_Squat', 5, 5], ['f-Barbell_Bench_Press_-_Medium_Grip', 5, 5], ['f-Bent_Over_Barbell_Row', 5, 5]],
   },
   {
-    id: 'force-b', emoji: '🏆', name: 'Force 5×5 · B', detail: 'Squat, développé militaire, soulevé de terre',
+    id: 'force-b', name: 'Force 5×5 · B', detail: 'Squat, développé militaire, soulevé de terre',
     exercises: [['f-Barbell_Squat', 5, 5], ['f-Standing_Military_Press', 5, 5], ['f-Barbell_Deadlift', 1, 5]],
   },
   {
-    id: 'abdos', emoji: '🔥', name: 'Abdos express', detail: '15 minutes, sans matériel',
+    id: 'abdos', name: 'Abdos express', detail: '15 minutes, sans matériel',
     exercises: [
       ['f-Crunches', 3, 20], ['f-Plank', 3, 45], ['f-Hanging_Leg_Raise', 3, 12], ['f-Russian_Twist', 3, 20],
       ['f-Mountain_Climbers', 3, 30],
     ],
   },
   {
-    id: 'maison', emoji: '🏠', name: 'Sans matériel', detail: 'À la maison, au poids du corps',
+    id: 'maison', name: 'Sans matériel', detail: 'À la maison, au poids du corps',
     exercises: [
       ['f-Pushups', 4, 12], ['f-Bodyweight_Squat', 4, 20], ['f-Bodyweight_Walking_Lunge', 3, 12],
       ['f-Bench_Dips', 3, 12], ['f-Superman', 3, 15], ['w-997', 3, 10], ['f-Plank', 3, 45],
@@ -92,14 +92,14 @@ export const PROGRAMS = [
 
 // Rangs selon l'expérience gagnée (XP) à chaque séance.
 export const RANKS = [
-  { name: 'Fer', xp: 0, emoji: '⚙️', color: '#8a8f98' },
-  { name: 'Bronze', xp: 300, emoji: '🥉', color: '#cd7f32' },
-  { name: 'Argent', xp: 900, emoji: '🥈', color: '#a7b1bc' },
-  { name: 'Or', xp: 2000, emoji: '🥇', color: '#f2b705' },
-  { name: 'Platine', xp: 4000, emoji: '💠', color: '#3fbfb0' },
-  { name: 'Diamant', xp: 7000, emoji: '💎', color: '#4d8bff' },
-  { name: 'Maître', xp: 11000, emoji: '👑', color: '#a45cff' },
-  { name: 'Légende', xp: 16000, emoji: '🔥', color: '#ff5e62' },
+  { name: 'Fer', xp: 0, color: '#7c8591', light: '#d3d8de' },
+  { name: 'Bronze', xp: 300, color: '#b8692e', light: '#f3b985' },
+  { name: 'Argent', xp: 900, color: '#8f9cab', light: '#f1f4f8' },
+  { name: 'Or', xp: 2000, color: '#e0a400', light: '#ffe58f' },
+  { name: 'Platine', xp: 4000, color: '#22a596', light: '#a8f0e6' },
+  { name: 'Diamant', xp: 7000, color: '#3b6fe0', light: '#b3d0ff' },
+  { name: 'Maître', xp: 11000, color: '#8a3ffc', light: '#dcc1ff' },
+  { name: 'Légende', xp: 16000, color: '#ff3b3b', light: '#ffc29c' },
 ];
 
 export function rankFor(xp) {
@@ -107,7 +107,7 @@ export function rankFor(xp) {
   while (i + 1 < RANKS.length && xp >= RANKS[i + 1].xp) i++;
   const rank = RANKS[i];
   const next = RANKS[i + 1];
-  return { rank, next, progress: next ? (xp - rank.xp) / (next.xp - rank.xp) : 1 };
+  return { rank, index: i, next, progress: next ? (xp - rank.xp) / (next.xp - rank.xp) : 1 };
 }
 
 // Niveaux de force : 1RM estimé / poids de corps (repères usuels hommes ; ×0,65 pour les femmes).

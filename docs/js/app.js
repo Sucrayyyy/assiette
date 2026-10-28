@@ -6,7 +6,7 @@ import {
 import { SUGGESTIONS, searchGeneric } from './foods.js';
 import { searchOff, searchCatalog, loadCatalog, productByBarcode } from './off.js';
 import { analyzeMeal, preparePhoto, RELAY_URL } from './scanner.js';
-import { esc, icon, COLORS, ring, macroRings, animateRings, chips, bar, stepper, toast } from './ui.js';
+import { esc, icon, COLORS, ring, macroRings, animateRings, animateCounts, levelBars, chips, bar, stepper, toast } from './ui.js';
 import { initWorkout, workoutTabView, sessionAccessory } from './workout.js';
 
 const $app = document.getElementById('app');
@@ -48,6 +48,8 @@ let shownScan = '';
 
 function renderApp() {
   const view = state.profile ? `tab:${ui.tab}` : `ob:${ui.ob.step}`;
+  // La muscu passe en thème sport sombre.
+  document.body.classList.toggle('sport', !!state.profile && ui.tab === 'muscu');
   if (!state.profile) {
     $app.innerHTML = onboardingView();
     animateRings($app);
@@ -58,7 +60,10 @@ function renderApp() {
       ui.animate = false;
     }
   }
-  if (view !== shownView) $app.querySelector('.screen, .ob-body')?.classList.add('enter');
+  if (view !== shownView) {
+    $app.querySelector('.screen, .ob-body')?.classList.add('enter');
+    animateCounts($app);
+  }
   shownView = view;
 }
 
@@ -163,7 +168,7 @@ function mealCard(meal, entries) {
   const kcal = itemsMacros(entries.flatMap((e) => e.items)).kcal;
   return `<section class="meal glass">
     <div class="meal-head">
-      <span class="emoji">${meal.icon}</span><h3>${meal.label}</h3>
+      <span class="emoji">${icon[meal.icon]}</span><h3>${meal.label}</h3>
       ${entries.length ? `<span class="kcal">${n0(kcal)} kcal</span>` : ''}
       <button class="round glass" data-act="add-meal" data-meal="${meal.key}" aria-label="Ajouter au ${meal.label}">${icon.plus}</button>
     </div>
@@ -178,7 +183,7 @@ function entryRow(e) {
   return `<button class="entry" data-act="open-entry" data-id="${e.id}">
     ${e.photo ? `<img class="thumb" src="${e.photo}" alt="">` : `<span class="thumb">${e.items[0]?.source === 'off' ? icon.box : icon.leaf}</span>`}
     <div class="info">
-      <div class="name">${ai ? '✨ ' : ''}${esc(e.title)}</div>
+      <div class="name">${ai ? `<span class="ai-mark">${icon.sparkles}</span>` : ''}${esc(e.title)}</div>
       <div class="meta">${n0(grams)} g · P ${n0(m.protein)} g · Fib ${n1(m.fiber)} g</div>
     </div>
     <span class="num">${n0(m.kcal)}</span>
@@ -376,7 +381,7 @@ function profileView() {
     </section>
     <section class="card glass" style="display:flex;flex-direction:column;gap:12px">
       <h2>Scan IA</h2>
-      ${RELAY_URL ? `<p class="small" style="margin:0">✨ Le scan IA est inclus : rien à configurer.</p>` : ''}
+      ${RELAY_URL ? `<p class="small row" style="margin:0"><span class="ai-mark">${icon.sparkles}</span>Le scan IA est inclus : rien à configurer.</p>` : ''}
       ${RELAY_URL && !state.apiKey ? `<details><summary class="muted small">Utiliser ma propre clé API (facultatif)</summary>
         <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">${apiKeyFields()}</div></details>` : apiKeyFields()}
     </section>
@@ -386,7 +391,7 @@ function profileView() {
 }
 
 function apiKeyFields() {
-  return `<p class="muted small" style="margin:0">${state.apiKey ? '✅ Ta clé API perso est enregistrée sur ce téléphone.' : "Le scan photo utilise Claude, l'IA d'Anthropic. Crée une clé sur console.anthropic.com et colle-la ici."}</p>
+  return `<p class="muted small" style="margin:0">${state.apiKey ? 'Ta clé API perso est enregistrée sur ce téléphone.' : "Le scan photo utilise Claude, l'IA d'Anthropic. Crée une clé sur console.anthropic.com et colle-la ici."}</p>
     <input class="input" type="password" data-apikey placeholder="${state.apiKey ? 'Remplacer la clé (sk-ant-…)' : 'Colle ta clé (sk-ant-…)'}" autocomplete="off" autocapitalize="off" spellcheck="false">
     <div class="grid2">
       <button class="btn btn-primary" data-act="save-key" style="font-size:15px;padding:12px">Enregistrer</button>
@@ -402,7 +407,7 @@ function onboardingView() {
   const o = ui.ob;
   const options = (list, key) => `<div style="display:flex;flex-direction:column;gap:10px">${list
     .map((x) => `<button class="option glass ${o[key] === x.key ? 'active' : ''}" data-act="ob-pick" data-key="${key}" data-v="${x.key}">
-        <span class="ico">${x.icon}</span><div class="spacer"><b>${x.label}</b><small>${x.detail}</small></div>${o[key] === x.key ? icon.check : ''}</button>`)
+        <span class="ico">${x.level ? levelBars(x.level) : icon[x.icon]}</span><div class="spacer"><b>${x.label}</b><small>${x.detail}</small></div>${o[key] === x.key ? icon.check : ''}</button>`)
     .join('')}</div>`;
   const numSelect = (key, from, to, stepVal, unit) => {
     const opts = [];
@@ -419,13 +424,14 @@ function onboardingView() {
     case 0:
       body = `<div class="ob-body center">
         <div style="position:relative">${macroRings({ kcal: 1700, protein: 90, fiber: 22 }, { kcal: 2200, protein: 110, fiber: 30 }, 170, 16, false)}
-          <div class="rings-center" style="font-size:34px">🍽️</div></div>
+          <div class="rings-center big-icon">${icon.utensils}</div></div>
         <h1 style="font-size:44px">Assiette</h1>
         <p class="muted" style="font-size:19px;margin:0;line-height:1.4">Prends ton plat en photo,<br>l'IA s'occupe des calories.</p>
         <div class="features glass">
-          <div><span>📸</span>Scan IA de tes plats, ajustable en un geste</div>
-          <div><span>🛒</span>Les produits vendus en France et le code-barres</div>
-          <div><span>🎯</span>Calories, protéines et fibres sur mesure</div>
+          <div>${icon.camera}Scan IA de tes plats, ajustable en un geste</div>
+          <div>${icon.cart}Les produits vendus en France et le code-barres</div>
+          <div>${icon.target}Calories, protéines et fibres sur mesure</div>
+          <div>${icon.dumbbell}Muscu : séances, records, rangs et récup</div>
         </div>
       </div>`;
       break;
@@ -518,7 +524,7 @@ function portionView(sh) {
 }
 
 function mealPicker(current, act) {
-  return `<div class="meals">${MEALS.map((m) => `<button class="glass ${current === m.key ? 'active' : ''}" data-act="${act}" data-meal="${m.key}"><span>${m.icon}</span>${m.short}</button>`).join('')}</div>`;
+  return `<div class="meals">${MEALS.map((m) => `<button class="glass ${current === m.key ? 'active' : ''}" data-act="${act}" data-meal="${m.key}"><span>${icon[m.icon]}</span>${m.short}</button>`).join('')}</div>`;
 }
 
 function entryView(sh) {
@@ -617,7 +623,7 @@ function renderScan() {
     $scan.innerHTML = `<div class="layer scan-pick">
       <div class="scan-top"><span class="pill dark-glass">Cadre ton assiette</span>
         <button class="round dark-glass" data-act="close-scan" aria-label="Fermer">${icon.x}</button></div>
-      <div class="frame"><div class="emoji">📸</div><h2>Prends ton plat en photo</h2>
+      <div class="frame"><div class="emoji float">${icon.camera}</div><h2>Prends ton plat en photo</h2>
         <p>L'IA reconnaît chaque aliment, estime les quantités et remplit les macros. Tu pourras ajuster ensuite.</p></div>
       <div class="shutter-row">
         <button class="side-btn dark-glass" data-act="scan-library" aria-label="Choisir une photo">${icon.photo}</button>
@@ -656,7 +662,7 @@ function reviewView(sc) {
       <input class="dish-input" data-dish value="${esc(r.dish)}">
       <div class="big-kcal"><span class="kcal-grad" style="font-size:46px;color:transparent">${n0(total.kcal)}</span> <span>kcal</span></div>
       ${chips(total)}
-      ${r.notes ? `<p class="muted small" style="margin:0">ℹ️ ${esc(r.notes)}</p>` : ''}
+      ${r.notes ? `<p class="muted small" style="margin:0"><span class="ai-mark">${icon.info}</span> ${esc(r.notes)}</p>` : ''}
     </section>
     <div class="row"><h2 class="spacer" style="font-size:17px">Ingrédients détectés</h2><span class="muted small">Ajuste si besoin</span></div>
     ${r.items.map((it, i) => `<div class="ingredient glass">
@@ -878,7 +884,7 @@ document.addEventListener('click', (e) => {
       updateEntry(sh.entry);
       closeSheet();
       renderApp();
-      toast('Modifié ✓');
+      toast('Modifié');
       break;
     case 'entry-delete':
       if (confirm(`Supprimer « ${sh.entry.title} » du journal ?`)) {
@@ -896,7 +902,7 @@ document.addEventListener('click', (e) => {
         logWeight(kg, dayKey());
         closeSheet();
         renderApp();
-        toast('Poids noté ✓');
+        toast('Poids noté');
       }
       break;
     }
@@ -945,7 +951,7 @@ document.addEventListener('click', (e) => {
         addEntry({ day: ui.day, meal: sh.meal, title: foodTitle(f), items: [{ name: f.name, brand: f.brand, grams: sh.grams, per100: f.per100, source: f.source }] });
         closeSheet();
         renderApp();
-        toast('Ajouté au journal ✓');
+        toast('Ajouté au journal');
       }
       break;
     }
@@ -1016,7 +1022,7 @@ document.addEventListener('click', (e) => {
       ui.tab = 'today';
       ui.animate = true;
       renderApp();
-      toast('Ajouté au journal ✓');
+      toast('Ajouté au journal');
       break;
     }
 
@@ -1032,7 +1038,7 @@ document.addEventListener('click', (e) => {
       state.apiKey = key;
       save();
       renderApp();
-      toast('Clé enregistrée ✓');
+      toast('Clé enregistrée');
       break;
     }
     case 'delete-key':
