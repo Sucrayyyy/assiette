@@ -1,5 +1,5 @@
 // Garde l'app disponible hors connexion (les recherches et le scan IA ont besoin d'internet).
-const CACHE = 'assiette-v5';
+const CACHE = 'assiette-v6';
 const SHELL = [
   './',
   './index.html',
@@ -17,6 +17,7 @@ const SHELL = [
   './js/workout-data.js',
   './js/badges.js',
   './js/figure.js',
+  './js/splash.js',
   './icons/apple-touch-icon.png',
   './icons/icon-192.png',
   './icons/icon-512.png',

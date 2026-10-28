@@ -1,6 +1,6 @@
 # Assiette 🥗
 
-Compte tes calories avec un scan IA de tes plats. Design épuré façon **Liquid Glass**.
+Compte tes calories, tes pas et progresse à la salle. Design épuré façon **Liquid Glass**.
 
 ## 📲 Installer sur ton téléphone (gratuit, sans rien télécharger)
 
@@ -9,12 +9,21 @@ Compte tes calories avec un scan IA de tes plats. Design épuré façon **Liquid
 - **iPhone** : ouvre le lien dans **Safari**, touche **Partager** (le carré avec la flèche) puis **« Sur l'écran d'accueil »**. L'icône Assiette apparaît avec tes apps et s'ouvre en plein écran.
 - **Android** : ouvre le lien dans **Chrome**, touche **« Installer l'application »** (ou menu ⋮ › Installer).
 
-Tes données restent sur ton téléphone. Pour le scan IA, colle ta clé API Anthropic dans **Profil › Scan IA** (à créer sur [console.anthropic.com](https://console.anthropic.com)).
+Tes données restent sur ton téléphone.
+
+### 🍽️ Nutrition
+
+- **Plus de 68 000 produits d'Europe** intégrés (France, Belgique, Suisse, Allemagne, Espagne, Italie, Royaume-Uni…), recherche instantanée même hors ligne, plus la base mondiale Open Food Facts en ligne.
+- **Scan de code-barres** rapide (caméra HD, mise au point continue, clé de contrôle, bip). Produit inconnu ? Tu le crées depuis l'étiquette et il est reconnu au prochain scan.
+- **Rythme de perte ou de prise de poids** au choix (−0,25 à −1 kg par semaine, +0,25 ou +0,5 kg), avec les calories par jour affichées.
+- **Pas** : reliés à l'app Santé de l'iPhone avec un raccourci Apple (instructions dans l'app), ou notés à la main. Les calories brûlées s'ajoutent à ta journée.
+- **Citation du jour** animée à chaque ouverture.
+- Le scan IA des assiettes est mis en pause pour le moment.
 
 ### 🏋️ Muscu
 
 - **Séances** : libre, perso (tu crées les tiennes) ou programmes prêts (Full body, Push/Pull/Legs, Haut/Bas, Force 5×5, Abdos, Sans matériel).
-- **1 758 exercices** avec photos, triés par muscle (touche un muscle sur le schéma du corps) et par matériel.
+- **1 758 exercices**, chacun avec un personnage animé vu de face (ou de dos) et les muscles travaillés en couleur, filtrables par muscle et par matériel.
 - **Surcharge progressive** : à chaque série, tes anciens scores, les poids pré-remplis et la prochaine marche à viser. Records 🏆 détectés automatiquement.
 - **Récupération** : schéma du corps coloré selon la fatigue de chaque muscle.
 - **Rangs** (Fer → Légende), niveaux de force et **classement entre amis** par lien de partage.

@@ -11,10 +11,31 @@ export const ACTIVITIES = [
 ];
 
 export const GOALS = [
-  { key: 'perte', label: 'Perdre du poids', detail: 'Environ -0,5 kg par semaine', icon: 'trendDown' },
+  { key: 'perte', label: 'Perdre du poids', detail: 'Choisis ton rythme juste après', icon: 'trendDown' },
   { key: 'maintien', label: 'Garder mon poids', detail: "Manger à l'équilibre", icon: 'equal' },
-  { key: 'prise', label: 'Prendre du muscle', detail: 'Environ +0,25 kg par semaine', icon: 'trendUp' },
+  { key: 'prise', label: 'Prendre du muscle', detail: 'Choisis ton rythme juste après', icon: 'trendUp' },
 ];
+
+// Rythme en kg par semaine : 1 kg de graisse ≈ 7 700 kcal.
+export const PACES = {
+  perte: [
+    { kg: 0.25, label: 'Tranquille', detail: 'Facile à tenir, sans frustration' },
+    { kg: 0.5, label: 'Régulier', detail: 'Le bon compromis, recommandé' },
+    { kg: 0.75, label: 'Soutenu', detail: 'Demande de la rigueur' },
+    { kg: 1, label: 'Rapide', detail: 'Exigeant, pas trop longtemps' },
+  ],
+  prise: [
+    { kg: 0.25, label: 'Prise propre', detail: 'Surtout du muscle, peu de gras' },
+    { kg: 0.5, label: 'Prise rapide', detail: 'Plus de force, un peu plus de gras' },
+  ],
+};
+export const defaultPace = (goal) => (goal === 'prise' ? 0.25 : 0.5);
+export const minKcal = (p) => (p.sex === 'homme' ? 1500 : 1200);
+
+// Calories brûlées en marchant : environ 0,5 kcal par pas et par 1 000 kg de poids de corps (≈ 0,035 kcal par pas à 70 kg).
+export const stepsKcal = (steps, weightKg) => Math.round((steps || 0) * (weightKg || 70) * 0.0005);
+export const stepsOn = (day) => state.steps?.[day] || 0;
+export const burnedOn = (day) => (state.profile && state.stepsToBudget !== false ? stepsKcal(stepsOn(day), state.profile.weightKg) : 0);
 
 export const MEALS = [
   { key: 'petit_dej', label: 'Petit-déjeuner', short: 'Petit-déj', icon: 'coffee' },
@@ -32,9 +53,10 @@ export function bmr({ sex, weightKg, heightCm, age }) {
 export function autoTargets(p) {
   const factor = ACTIVITIES.find((a) => a.key === p.activity)?.factor ?? 1.2;
   const tdee = bmr(p) * factor;
+  const daily = ((p.pace || defaultPace(p.goal)) * 7700) / 7;
   let kcal = tdee;
-  if (p.goal === 'perte') kcal = Math.max(tdee - 500, p.sex === 'homme' ? 1500 : 1200);
-  if (p.goal === 'prise') kcal = tdee + 300;
+  if (p.goal === 'perte') kcal = Math.max(tdee - daily, minKcal(p));
+  if (p.goal === 'prise') kcal = tdee + daily;
   // Protéines en g/kg, plus hautes en sèche et en prise de muscle.
   const protein = p.weightKg * (p.goal === 'maintien' ? 1.6 : p.goal === 'perte' ? 1.8 : 2.0);
   // Lipides : 30 % des calories. Glucides : le reste. Fibres : 14 g / 1000 kcal, au moins 30 g (ANSES).
@@ -134,8 +156,8 @@ export function coachMessage(t, g, hasEntries, isToday) {
   if (!hasEntries) {
     if (!isToday) return 'Rien de noté ce jour-là.';
     return new Date().getHours() < 11
-      ? 'Nouvelle journée. Commence par scanner ton petit-déj.'
-      : "Rien de noté pour l'instant. Un scan et c'est parti.";
+      ? 'Nouvelle journée. Commence par noter ton petit-déj.'
+      : "Rien de noté pour l'instant. Touche + à côté d'un repas.";
   }
   const proteinLeft = g.protein - t.protein;
   const fiberLeft = g.fiber - t.fiber;

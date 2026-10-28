@@ -2,7 +2,7 @@ import { state, save, uid } from './store.js';
 import { n0, n1 } from './nutrition.js';
 import { esc, icon, toast, animateCounts, confetti } from './ui.js';
 import { rankBadge } from './badges.js';
-import { exerciseFigure } from './figure.js';
+import { exerciseFigure, viewFor } from './figure.js';
 import { bodyDiagram } from './body.js';
 import {
   MUSCLES, muscleLabel, PROGRAMS, RANKS, rankFor, LIFTS, LEVELS, strengthLevel,
@@ -151,8 +151,12 @@ function rankCard() {
 
 function sessionsSection() {
   const routines = state.routines;
-  const recent = [...state.workouts].sort((a, b) => b.end - a.end).slice(0, 8);
-  return `${rankCard()}
+  const recent = [...state.workouts].sort((a, b) => b.end - a.end).slice(0, 3);
+  const xp = totalXp();
+  const { rank, index, next, progress } = rankFor(xp);
+  return `<button class="rank-mini glass" data-wact="section" data-s="classement">${rankBadge(index, 40, { shine: false })}
+      <div class="spacer"><b>${rank.name}</b> <span class="muted small">· ${n0(xp)} XP${next ? ` · ${next.name} à ${n0(next.xp)}` : ''}</span>
+        <div class="bar-track" style="--c:${rank.color}"><div class="bar-fill" style="width:${Math.round(progress * 100)}%"></div></div></div>${icon.chevron}</button>
     ${state.activeWorkout
       ? `<button class="cta glass tinted" data-wact="open-session">${icon.dumbbell}<div class="spacer"><b>Reprendre ma séance</b><span>${esc(state.activeWorkout.name)} · <span data-elapsed>${clock(Date.now() - state.activeWorkout.start)}</span></span></div>${icon.chevron}</button>`
       : `<button class="cta glass tinted" data-wact="start-free">${icon.plus}<div class="spacer"><b>Séance libre</b><span>Ajoute tes exercices au fur et à mesure</span></div>${icon.dumbbell}</button>`}
@@ -166,8 +170,8 @@ function sessionsSection() {
         </div>`).join('')}</div>`
       : '<p class="muted small" style="margin:0">Crée tes propres séances : choisis tes exercices, tes séries et tes répétitions.</p>'}
     <h2>Programmes</h2>
-    <div class="programs">${PROGRAMS.map((p) => `<button class="program glass" data-wact="start-program" data-id="${p.id}">
-        <span class="prog-art">${programFigure(p)}</span><b>${esc(p.name)}</b><small>${esc(p.detail)}</small><small class="muted">${p.exercises.length} exercices</small></button>`).join('')}</div>
+    <div class="programs carousel">${PROGRAMS.map((p) => `<button class="program glass" data-wact="start-program" data-id="${p.id}">
+        <span class="prog-art">${programFigure(p)}</span><b>${esc(p.name)}</b><small class="muted">${p.exercises.length} exercices</small></button>`).join('')}</div>
     ${recent.length ? `<h2>Historique</h2><div class="list glass">${recent.map((w) => `<button class="food" data-wact="workout-detail" data-id="${w.id}">
         <span class="icon-chip">${icon.dumbbell}</span>
         <div class="info"><div class="name">${esc(w.name)}${w.prs.length ? `<span class="pr-mark">${icon.trophy}</span>` : ''}</div>
@@ -191,13 +195,11 @@ function musclesSummary(exercises) {
 
 function exercisesSection() {
   if (!libraryReady()) return '<div class="spinner"></div>';
-  const colors = wui.muscle ? { [wui.muscle]: '#ff5e62' } : {};
+  const select = (key, all, options) => `<select class="glass" data-wfilter="${key}">
+      <option value="">${all}</option>${options.map(([v, l]) => `<option value="${esc(v)}" ${wui[key] === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>`;
   return `<div class="search-bar glass">${icon.search}
       <input type="search" data-wquery placeholder="Développé couché, squat, curl…" value="${esc(wui.query)}" autocomplete="off" autocorrect="off" spellcheck="false" enterkeyhint="search"></div>
-    <section class="card glass body-card">${bodyDiagram(colors, { clickable: true })}
-      <p class="muted small" style="margin:0;text-align:center">Touche un muscle pour filtrer</p></section>
-    <div class="pills">${muscleChips(wui.muscle, 'muscle-filter')}</div>
-    <div class="pills">${['', ...EQUIPMENTS].map((eq) => `<button class="pill glass ${wui.equipment === eq ? 'active' : ''}" data-wact="equipment-filter" data-eq="${esc(eq)}">${eq || 'Tout le matériel'}</button>`).join('')}</div>
+    <div class="filter-row">${select('muscle', 'Tous les muscles', Object.entries(MUSCLES).map(([k, m]) => [k, m.label]))}${select('equipment', 'Tout le matériel', EQUIPMENTS.map((e) => [e, e]))}</div>
     <div data-wresults>${exerciseResults(wui, 'exercise-detail')}</div>`;
 }
 
@@ -233,12 +235,12 @@ function recoverySection() {
     <div class="coach glass"><span class="badge">${icon.leaf}</span><span>${tired.length
       ? `Laisse souffler : ${esc(tired.join(', '))}. Tu peux entraîner ${esc(ready.slice(0, 4).join(', ') || 'autre chose')}.`
       : trained.length ? 'Tout est récupéré ou presque, fonce.' : 'Fais ta première séance pour suivre la récupération de tes muscles.'}</span></div>
-    <section class="card glass" style="display:flex;flex-direction:column;gap:12px">
-      ${Object.entries(rec).sort((a, b) => a[1].pct - b[1].pct).map(([m, r]) => `<div>
-        <div class="bar-top"><span>${muscleLabel(m)}</span><b>${r.last ? `${r.pct} % · ${ago(r.last)}` : 'Pas entraîné cette semaine'}</b></div>
-        <div class="bar-track" style="--c:${r.last ? recoveryColor(r.pct) : '#22a06b'}"><div class="bar-fill" style="width:${r.pct}%"></div></div>
+    ${trained.length ? `<section class="card glass" style="display:flex;flex-direction:column;gap:12px">
+      ${trained.sort((a, b) => a[1].pct - b[1].pct).map(([m, r]) => `<div>
+        <div class="bar-top"><span>${muscleLabel(m)}</span><b>${r.pct} % · ${ago(r.last)}</b></div>
+        <div class="bar-track" style="--c:${recoveryColor(r.pct)}"><div class="bar-fill" style="width:${r.pct}%"></div></div>
       </div>`).join('')}
-    </section>`;
+    </section>` : ''}`;
 }
 
 function rankingSection() {
@@ -271,11 +273,12 @@ function rankingSection() {
       }).join('')}
       <p class="muted small" style="margin:0">Basés sur ton 1RM estimé rapporté à ton poids de corps.</p>
     </section>
-    <section class="card glass" style="display:flex;flex-direction:column;gap:8px">
-      <h2>Rangs</h2>
+    <details class="card glass ranks-details">
+      <summary><h2 style="display:inline">Tous les rangs</h2></summary>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
       ${RANKS.map((r, ri) => `<div class="row ${r.name === rank.name ? 'rank-current' : ''}">${rankBadge(ri, 34, { shine: r.name === rank.name })}<b class="spacer">${r.name}</b><span class="muted small">${n0(r.xp)} XP</span></div>`).join('')}
       <p class="muted small" style="margin:0">Gagne de l'XP à chaque séance : séries validées, volume soulevé et records battus.</p>
-    </section>`;
+    </div></details>`;
 }
 
 // ---------------------------------------------------------------------------
@@ -515,7 +518,7 @@ function exerciseSheet(sh) {
   const level = lift && best && p ? strengthLevel(lift, best, p.weightKg, p.sex) : null;
   return `${sheetHead(esc(ex.name))}
     ${ex.fr && ex.en !== ex.fr ? `<div class="muted small" style="margin-top:-10px">${esc(ex.en)}</div>` : ''}
-    <div class="fig-hero">${exerciseFigure(ex, { size: 210, crop: true })}</div>
+    <div class="fig-hero">${exerciseFigure(ex, { size: 230, crop: true })}<span class="fig-view">${viewFor(ex) === 'front' ? 'Vue de face' : 'Vue de dos'}</span></div>
     ${ex.img ? `<details class="photo-toggle"><summary class="link">${icon.photo} Voir une photo réelle</summary>
       <img class="ex-photo" src="${esc(ex.img)}" alt="" loading="lazy" onerror="this.closest('details').remove()"></details>` : ''}
     <div class="chips"><span class="chip" style="--c:var(--accent)">${esc(ex.eq)}</span>
@@ -915,6 +918,14 @@ document.addEventListener('click', async (e) => {
       save();
       rerenderApp();
       break;
+  }
+});
+
+document.addEventListener('change', (e) => {
+  const t = e.target;
+  if (t.matches('[data-wfilter]')) {
+    wui[t.dataset.wfilter] = t.value;
+    refreshResults('[data-wresults]', wui, 'exercise-detail');
   }
 });
 

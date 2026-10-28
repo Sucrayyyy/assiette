@@ -4,45 +4,75 @@ import { normalize } from './foods.js';
 const FIELDS = 'code,product_name,product_name_fr,generic_name_fr,brands,nutriments,serving_quantity,serving_size,image_front_small_url';
 const cache = new Map();
 
-// Catalogue intégré : les produits les plus scannés en France, pour une recherche instantanée et hors ligne.
-let catalogPromise = null;
+// Catalogues intégrés, pour une recherche instantanée et hors ligne :
+// les produits les plus scannés en France (avec photos), puis ceux du reste de l'Europe.
+const CATALOGS = { fr: 'data/produits-fr.json', eu: 'data/produits-eu.json' };
+const catalogs = {};
+const byCode = new Map();
 
-export function loadCatalog() {
-  catalogPromise ??= fetch('data/produits-fr.json')
+function loadOne(name) {
+  catalogs[name] ??= fetch(CATALOGS[name])
     .then((r) => r.json())
     .then((d) =>
-      d.products.map(([code, name, brand, kcal, protein, carbs, fat, fiber, servingG, servingLabel, img]) => ({
-        key: normalize(`${name} ${brand}`),
-        food: {
-          id: `off-${code}`,
-          name,
-          brand: brand || undefined,
-          per100: { kcal, protein, carbs, fat, fiber },
-          servingG: servingG || undefined,
-          servingLabel: servingLabel || undefined,
-          source: 'off',
-          imageUrl: img ? (img.startsWith('http') ? img : d.imgPrefix + img) : undefined,
-        },
-      })),
+      d.products.map(([code, name, brand, kcal, protein, carbs, fat, fiber, servingG, servingLabel, img]) => {
+        const p = {
+          key: normalize(`${name} ${brand}`),
+          food: {
+            id: `off-${code}`,
+            code,
+            name,
+            brand: brand || undefined,
+            per100: { kcal, protein, carbs, fat, fiber },
+            servingG: servingG || undefined,
+            servingLabel: servingLabel || undefined,
+            source: 'off',
+            imageUrl: img ? (img.startsWith('http') ? img : d.imgPrefix + img) : undefined,
+          },
+        };
+        byCode.set(code, p.food);
+        return p;
+      }),
     )
     .catch((e) => {
-      catalogPromise = null;
+      delete catalogs[name];
       throw e;
     });
-  return catalogPromise;
+  return catalogs[name];
 }
 
-export async function searchCatalog(query, limit = 40) {
+export const loadCatalog = () => loadOne('fr');
+export const loadAllCatalogs = () => Promise.allSettled([loadOne('fr'), loadOne('eu')]);
+
+export async function searchCatalog(query, limit = 50) {
   const words = normalize(query).split(/\s+/).filter(Boolean);
   if (!words.length) return [];
-  const out = [];
-  for (const p of await loadCatalog()) {
-    if (words.every((w) => p.key.includes(w))) {
-      out.push(p.food);
-      if (out.length >= limit) break;
+  const starts = [];
+  const others = [];
+  for (const name of ['fr', 'eu']) {
+    let list;
+    try {
+      list = await loadOne(name);
+    } catch {
+      continue;
     }
+    for (const p of list) {
+      if (!words.every((w) => p.key.includes(w))) continue;
+      // Ceux dont le nom commence par le premier mot passent devant.
+      (p.key.startsWith(words[0]) ? starts : others).push(p.food);
+      if (starts.length >= limit) break;
+    }
+    if (starts.length + others.length >= limit * 2) break;
   }
-  return out;
+  return [...starts, ...others].slice(0, limit);
+}
+
+/** Code-barres valide (EAN-13, EAN-8, UPC-A) : le dernier chiffre est une clé de contrôle. */
+export function validBarcode(code) {
+  if (!/^(\d{8}|\d{12}|\d{13})$/.test(code)) return false;
+  const digits = code.split('').map(Number);
+  const check = digits.pop();
+  const sum = digits.reverse().reduce((acc, d, i) => acc + d * (i % 2 === 0 ? 3 : 1), 0);
+  return (10 - (sum % 10)) % 10 === check;
 }
 
 const num = (v) => {
@@ -82,20 +112,39 @@ function toFood(p, code) {
 export async function searchOff(query, signal) {
   const key = query.toLowerCase();
   if (cache.has(key)) return cache.get(key);
-  const url =
-    'https://fr.openfoodfacts.org/cgi/search.pl?search_simple=1&action=process&json=1&page_size=24&sort_by=unique_scans_n' +
-    `&fields=${FIELDS}&search_terms=${encodeURIComponent(query)}`;
-  const res = await fetch(url, { signal });
-  if (!res.ok) throw new Error('Open Food Facts est occupé, réessaie dans un instant.');
-  const json = await res.json();
+  // Base mondiale (toute l'Europe), avec un second essai sur le miroir français si elle est occupée.
+  let json;
+  for (const host of ['world.openfoodfacts.org', 'fr.openfoodfacts.org']) {
+    const url = `https://${host}/cgi/search.pl?search_simple=1&action=process&json=1&page_size=24&sort_by=unique_scans_n` +
+      `&fields=${FIELDS}&search_terms=${encodeURIComponent(query)}`;
+    const res = await fetch(url, { signal });
+    if (res.ok) {
+      json = await res.json();
+      break;
+    }
+  }
+  if (!json) throw new Error('Open Food Facts est occupé, réessaie dans un instant.');
   const foods = (json.products || []).map((p) => toFood(p)).filter(Boolean);
   cache.set(key, foods);
   return foods;
 }
 
+/** Cherche d'abord dans les catalogues du téléphone, puis dans toute la base mondiale Open Food Facts. */
 export async function productByBarcode(code) {
-  const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${FIELDS}`);
-  if (!res.ok) return null;
-  const json = await res.json();
-  return json.product ? toFood(json.product, code) : null;
+  const variants = [...new Set([code, code.length === 12 ? `0${code}` : code, code.length === 13 && code.startsWith('0') ? code.slice(1) : code])];
+  await loadAllCatalogs();
+  for (const c of variants) if (byCode.has(c)) return byCode.get(c);
+  let reached = false;
+  for (const c of variants) {
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(c)}.json?fields=${FIELDS}`);
+      reached = true;
+      if (!res.ok) continue;
+      const json = await res.json();
+      const food = json.product && toFood(json.product, c);
+      if (food) return food;
+    } catch { /* hors ligne : on essaie la variante suivante */ }
+  }
+  if (!reached) throw new Error('offline');
+  return null;
 }

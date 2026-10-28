@@ -3,6 +3,9 @@ const KEY = 'assiette.v1';
 
 const defaults = () => ({
   profile: null, entries: [], weights: [], recents: [], apiKey: '',
+  // Pas du jour (Santé via Raccourcis, ou saisis à la main)
+  steps: {}, stepsToBudget: true, stepsShortcut: false,
+  customFoods: [],
   // Muscu
   workouts: [], routines: [], friends: [], activeWorkout: null, userId: '',
 });
