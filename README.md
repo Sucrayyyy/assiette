@@ -13,7 +13,20 @@ App iPhone native (SwiftUI, iOS 26+) pour compter ses calories, avec le design *
 
 Aucune dépendance externe : pas de CocoaPods, pas de Swift Package. Juste Xcode.
 
-## Installer sur ton iPhone
+## Installer le fichier .ipa (sans Xcode)
+
+Le fichier `Assiette.ipa` est dans les [Releases](../../releases). Il n'est pas signé : iOS n'installe que des apps signées, donc un outil le signe avec ton identifiant Apple au moment de l'installer.
+
+**Avec Sideloadly** (Mac ou PC, le plus simple) :
+1. Installe [Sideloadly](https://sideloadly.io) et branche ton iPhone avec un câble.
+2. Glisse `Assiette.ipa` dans Sideloadly, entre ton identifiant Apple, clique sur **Start**.
+3. Sur l'iPhone : active le **Mode développeur** (Réglages › Confidentialité et sécurité), puis Réglages › Général › VPN et gestion de l'appareil › fais confiance à ton identifiant.
+
+**Avec AltStore** : installe [AltStore](https://altstore.io) sur ton iPhone, télécharge `Assiette.ipa` depuis la Release sur ton iPhone, puis ouvre-le avec AltStore.
+
+Avec un identifiant Apple gratuit, l'app doit être resignée tous les 7 jours (AltStore peut le faire automatiquement).
+
+## Installer depuis Xcode
 
 1. Clone le projet et ouvre `Assiette.xcodeproj` dans Xcode.
 2. **Xcode › Réglages › Comptes** : ajoute ton identifiant Apple (gratuit).
