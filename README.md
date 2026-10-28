@@ -2,6 +2,10 @@
 
 Compte tes calories avec un scan IA de tes plats. Design épuré façon **Liquid Glass**.
 
+### ⬇️ [Télécharger l'app iPhone (Assiette.ipa)](https://github.com/Sucrayyyy/assiette/releases/latest/download/Assiette.ipa)
+
+Fichier pour iPhone (iOS 26 minimum), à installer avec Xcode, Sideloadly ou AltStore.
+
 ## 📲 Installer sur ton téléphone (gratuit, sans rien télécharger)
 
 ### 👉 **[sucrayyyy.github.io/assiette](https://sucrayyyy.github.io/assiette/)**
