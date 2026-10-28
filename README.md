@@ -1,12 +1,20 @@
 # Assiette 🥗
 
-App iPhone native (SwiftUI, iOS 26+) pour compter ses calories, avec le design **Liquid Glass**.
+Compte tes calories avec un scan IA de tes plats. Design épuré façon **Liquid Glass**.
 
-## 📲 Installer
+## 📲 Installer sur ton téléphone (gratuit, sans rien télécharger)
 
-**[👉 Page d'installation (bouton « Installer avec AltStore »)](https://sucrayyyy.github.io/assiette/)**
+### 👉 **[sucrayyyy.github.io/assiette](https://sucrayyyy.github.io/assiette/)**
 
-Ou dans AltStore › Sources › **+**, colle cette adresse :
+- **iPhone** : ouvre le lien dans **Safari**, touche **Partager** (le carré avec la flèche) puis **« Sur l'écran d'accueil »**. L'icône Assiette apparaît avec tes apps et s'ouvre en plein écran.
+- **Android** : ouvre le lien dans **Chrome**, touche **« Installer l'application »** (ou menu ⋮ › Installer).
+
+Tes données restent sur ton téléphone. Pour le scan IA, colle ta clé API Anthropic dans **Profil › Scan IA** (à créer sur [console.anthropic.com](https://console.anthropic.com)).
+
+## Version iPhone native (Xcode / AltStore)
+
+Le dossier `Assiette/` contient aussi une app iPhone native en SwiftUI.
+Page AltStore : [sucrayyyy.github.io/assiette/altstore.html](https://sucrayyyy.github.io/assiette/altstore.html). Ou dans AltStore › Sources › **+**, colle cette adresse :
 
 ```
 https://raw.githubusercontent.com/Sucrayyyy/assiette/main/docs/altstore.json
