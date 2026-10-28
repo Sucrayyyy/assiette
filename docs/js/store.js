@@ -1,7 +1,11 @@
 // État de l'app, sauvegardé dans le téléphone (localStorage).
 const KEY = 'assiette.v1';
 
-const defaults = () => ({ profile: null, entries: [], weights: [], recents: [], apiKey: '' });
+const defaults = () => ({
+  profile: null, entries: [], weights: [], recents: [], apiKey: '',
+  // Muscu
+  workouts: [], routines: [], friends: [], activeWorkout: null, userId: '',
+});
 
 function load() {
   try {

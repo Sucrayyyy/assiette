@@ -7,6 +7,7 @@ import { SUGGESTIONS, searchGeneric } from './foods.js';
 import { searchOff, searchCatalog, loadCatalog, productByBarcode } from './off.js';
 import { analyzeMeal, preparePhoto, RELAY_URL } from './scanner.js';
 import { esc, icon, COLORS, ring, macroRings, animateRings, chips, bar, stepper, toast } from './ui.js';
+import { initWorkout, workoutTabView, sessionAccessory } from './workout.js';
 
 const $app = document.getElementById('app');
 const $sheet = document.getElementById('sheet');
@@ -62,21 +63,22 @@ function renderApp() {
 }
 
 function mainView() {
-  const views = { today: todayView, progress: progressView, add: addView, profile: profileView };
+  const views = { today: todayView, muscu: workoutTabView, progress: progressView, add: addView, profile: profileView };
   return views[ui.tab]() + dockView();
 }
 
 function dockView() {
   const tab = (key, ico, label) =>
     `<button class="tab ${ui.tab === key ? 'active' : ''}" data-act="tab" data-tab="${key}">${ico}<span>${label}</span></button>`;
+  // Pendant une séance de muscu, la barre du haut devient le raccourci vers la séance.
   return `<nav class="dock">
-    <button class="accessory glass" data-act="open-scan">
+    ${sessionAccessory() || `<button class="accessory glass" data-act="open-scan">
       <span class="acc-icon">${icon.camera}</span>
       <div class="spacer"><b>Scanner mon assiette</b><small>L'IA remplit les macros pour toi</small></div>
       <span class="acc-icon">${icon.sparkles}</span>
-    </button>
+    </button>`}
     <div class="tabs glass">
-      ${tab('today', icon.sun, "Aujourd'hui")}${tab('progress', icon.chart, 'Progrès')}${tab('add', icon.search, 'Ajouter')}${tab('profile', icon.person, 'Profil')}
+      ${tab('today', icon.sun, "Aujourd'hui")}${tab('muscu', icon.dumbbell, 'Muscu')}${tab('add', icon.search, 'Ajouter')}${tab('progress', icon.chart, 'Progrès')}${tab('profile', icon.person, 'Profil')}
     </div>
   </nav>`;
 }
@@ -1125,6 +1127,8 @@ window.addEventListener('beforeinstallprompt', (e) => {
   installPrompt = e;
   if (state.profile && ui.tab === 'today') renderApp();
 });
+
+initWorkout({ renderApp });
 
 // Nouveau jour pendant que l'app est ouverte.
 document.addEventListener('visibilitychange', () => {
