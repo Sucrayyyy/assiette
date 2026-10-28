@@ -1,0 +1,14 @@
+# Xcode
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+
+# macOS
+.DS_Store
+
+# Secrets
+.env*
+*.p12
+*.mobileprovision
