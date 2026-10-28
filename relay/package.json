@@ -1,0 +1,12 @@
+{
+  "name": "assiette-ia",
+  "private": true,
+  "description": "Relais du scan IA d'Assiette : garde la clé API Anthropic côté serveur.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "4.150.0"
+  }
+}

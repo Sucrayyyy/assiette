@@ -1,0 +1,16 @@
+name = "assiette-ia"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+# Sites autorisés à utiliser le relais (séparés par des virgules).
+ALLOWED_ORIGINS = "https://sucrayyyy.github.io"
+
+# 5 scans par minute et par appareil (adresse IP), pour éviter les abus.
+[[ratelimits]]
+name = "SCAN_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 5
+  period = 60

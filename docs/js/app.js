@@ -5,7 +5,7 @@ import {
 } from './nutrition.js';
 import { SUGGESTIONS, searchGeneric } from './foods.js';
 import { searchOff, searchCatalog, loadCatalog, productByBarcode } from './off.js';
-import { analyzeMeal, preparePhoto } from './scanner.js';
+import { analyzeMeal, preparePhoto, RELAY_URL } from './scanner.js';
 import { esc, icon, COLORS, ring, macroRings, animateRings, chips, bar, stepper, toast } from './ui.js';
 
 const $app = document.getElementById('app');
@@ -374,16 +374,22 @@ function profileView() {
     </section>
     <section class="card glass" style="display:flex;flex-direction:column;gap:12px">
       <h2>Scan IA</h2>
-      <p class="muted small" style="margin:0">${state.apiKey ? '✅ Clé API enregistrée sur ce téléphone.' : "Le scan photo utilise Claude, l'IA d'Anthropic. Crée une clé sur console.anthropic.com et colle-la ici."}</p>
-      <input class="input" type="password" data-apikey placeholder="${state.apiKey ? 'Remplacer la clé (sk-ant-…)' : 'Colle ta clé (sk-ant-…)'}" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <div class="grid2">
-        <button class="btn btn-primary" data-act="save-key" style="font-size:15px;padding:12px">Enregistrer</button>
-        ${state.apiKey ? '<button class="btn glass btn-danger" data-act="delete-key" style="font-size:15px;padding:12px">Supprimer</button>' : ''}
-      </div>
+      ${RELAY_URL ? `<p class="small" style="margin:0">✨ Le scan IA est inclus : rien à configurer.</p>` : ''}
+      ${RELAY_URL && !state.apiKey ? `<details><summary class="muted small">Utiliser ma propre clé API (facultatif)</summary>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px">${apiKeyFields()}</div></details>` : apiKeyFields()}
     </section>
     <button class="btn glass btn-danger" data-act="reset">Réinitialiser l'app</button>
     <p class="muted small" style="text-align:center;margin:0">Aliments : Open Food Facts (licence ODbL) et valeurs moyennes de type CIQUAL.</p>
   </main>`;
+}
+
+function apiKeyFields() {
+  return `<p class="muted small" style="margin:0">${state.apiKey ? '✅ Ta clé API perso est enregistrée sur ce téléphone.' : "Le scan photo utilise Claude, l'IA d'Anthropic. Crée une clé sur console.anthropic.com et colle-la ici."}</p>
+    <input class="input" type="password" data-apikey placeholder="${state.apiKey ? 'Remplacer la clé (sk-ant-…)' : 'Colle ta clé (sk-ant-…)'}" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div class="grid2">
+      <button class="btn btn-primary" data-act="save-key" style="font-size:15px;padding:12px">Enregistrer</button>
+      ${state.apiKey ? '<button class="btn glass btn-danger" data-act="delete-key" style="font-size:15px;padding:12px">Supprimer</button>' : ''}
+    </div>`;
 }
 
 // ---------- Bienvenue ----------

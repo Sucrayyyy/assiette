@@ -3,6 +3,10 @@ import { state } from './store.js';
 // SDK officiel Anthropic, chargé à la demande (seulement quand on scanne un plat).
 const SDK_URL = 'https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@1.3.0/+esm';
 
+// Relais qui garde la clé API côté serveur (dossier relay/ du dépôt) : personne n'a de clé à saisir.
+// Une clé perso saisie dans Profil passe en priorité.
+export const RELAY_URL = '';
+
 const SYSTEM = `Tu es un nutritionniste qui estime le contenu d'un repas à partir d'une photo, pour une app de suivi des calories utilisée en France.
 - Décompose le plat en ingrédients distincts et visibles (ex. "Blanc de poulet grillé", "Riz basmati cuit", "Sauce crème"), y compris les matières grasses de cuisson et les sauces probables.
 - Estime le poids de chaque ingrédient tel que servi (cuit), en t'aidant de la taille de l'assiette, des couverts et des portions habituelles en France.
@@ -43,12 +47,16 @@ let client;
 let clientKey = '';
 
 async function getClient() {
-  if (!state.apiKey) throw new Error('Ajoute ta clé API Anthropic dans Profil › Scan IA pour activer le scan.');
+  if (!state.apiKey && !RELAY_URL) throw new Error('Ajoute ta clé API Anthropic dans Profil › Scan IA pour activer le scan.');
   sdk ??= (await import(SDK_URL)).default;
-  if (!client || clientKey !== state.apiKey) {
-    // Appel direct depuis le téléphone : la clé reste sur l'appareil de la personne.
-    client = new sdk({ apiKey: state.apiKey, dangerouslyAllowBrowser: true });
-    clientKey = state.apiKey;
+  const mode = state.apiKey || 'relais';
+  if (!client || clientKey !== mode) {
+    client = state.apiKey
+      ? // Clé perso : appel direct depuis le téléphone, la clé reste sur l'appareil.
+        new sdk({ apiKey: state.apiKey, dangerouslyAllowBrowser: true })
+      : // Relais : il ajoute lui-même la clé, celle envoyée ici n'est qu'un marqueur.
+        new sdk({ apiKey: 'relais', baseURL: RELAY_URL, dangerouslyAllowBrowser: true, maxRetries: 1 });
+    clientKey = mode;
   }
   return client;
 }
@@ -88,8 +96,10 @@ export async function analyzeMeal(jpegBase64, { previous, correction } = {}) {
       ],
     });
   } catch (e) {
-    if (e instanceof sdk.AuthenticationError) throw new Error('Clé API invalide. Vérifie-la dans Profil › Scan IA.');
-    if (e instanceof sdk.RateLimitError) throw new Error("Trop de demandes d'un coup. Réessaie dans quelques secondes.");
+    if (e instanceof sdk.AuthenticationError) {
+      throw new Error(state.apiKey ? 'Clé API invalide. Vérifie-la dans Profil › Scan IA.' : 'Le scan IA est momentanément indisponible.');
+    }
+    if (e instanceof sdk.RateLimitError) throw new Error("Trop de scans d'un coup. Réessaie dans une minute.");
     if (e instanceof sdk.APIConnectionError) throw new Error('Pas de connexion internet. Réessaie dans un instant.');
     if (e instanceof sdk.InternalServerError) throw new Error('Le service IA est surchargé. Réessaie dans un instant.');
     throw new Error(e?.message || "L'analyse a échoué.");
