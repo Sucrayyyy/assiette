@@ -14,6 +14,8 @@ const defaults = () => ({
   home: { week: true, steps: true, water: true, supps: true, score: true },
   trophies: {}, perfectDays: {}, lastBackup: 0, recapSeen: '',
   recipes: [], measures: [], timerCfg: null,
+  // Récompenses et coach
+  xpLog: [], xpBank: 0, daily: {}, freezes: 0, frozenDays: {}, coach: null,
   // Muscu
   workouts: [], routines: [], friends: [], activeWorkout: null, userId: '',
 });

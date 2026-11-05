@@ -143,7 +143,8 @@ export function dayLabel(key) {
 
 /** Jours consécutifs avec au moins une entrée (aujourd'hui compte s'il est déjà rempli). */
 export function streak() {
-  const days = new Set(state.entries.map((e) => e.day));
+  // Les jours couverts par un gel de série comptent comme notés.
+  const days = new Set([...state.entries.map((e) => e.day), ...Object.keys(state.frozenDays || {})]);
   let day = days.has(dayKey()) ? dayKey() : shiftDay(dayKey(), -1);
   let n = 0;
   while (days.has(day)) {

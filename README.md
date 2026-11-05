@@ -32,6 +32,9 @@ Tes données restent sur ton téléphone.
 
 ### ✨ Le reste
 
+- **Niveaux et XP** : chaque bonne habitude rapporte de l'XP (aliments notés, protéines, eau, pas, compléments, séances, journée parfaite), avec des passages de niveau célébrés et des **couleurs exclusives** à débloquer.
+- **Défis du jour** : trois défis chaque matin, et un **coffre** à ouvrir quand ils sont tous faits (bonus d'XP ou gel de série qui protège ta série).
+
 - **Couleur d'accentuation au choix** (10 teintes ou sur mesure), thème clair, sombre ou auto.
 - **Écran d'accueil à la carte** et **score du jour** : tous tes objectifs cochés, c'est une journée parfaite.
 - **Ma semaine** : récap animé façon story, avec une note sur 100 et une image à partager.
@@ -41,6 +44,8 @@ Tes données restent sur ton téléphone.
 - Le scan IA des assiettes est mis en pause pour le moment.
 
 ### 🏋️ Muscu
+
+- **Coach** : une conversation de 7 questions (objectif, niveau, jours, durée, matériel, priorités, douleurs). Il analyse tes séances actuelles, garde ce qui marche, corrige le reste et construit un programme d'hypertrophie sur mesure (fréquence 2 fois par semaine, 10 à 20 séries par muscle, double progression, décharge toutes les 6 semaines). La séance du jour suit ton programme, et le coach fait un bilan chaque semaine.
 
 - **Séances** : libre, perso (tu crées les tiennes) ou programmes prêts (Full body, Push/Pull/Legs, Haut/Bas, Force 5×5, Abdos, Sans matériel).
 - **1 758 exercices**, chacun avec un personnage animé vu de face (ou de dos) et les muscles travaillés en couleur, filtrables par muscle et par matériel.

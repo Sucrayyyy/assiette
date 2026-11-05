@@ -5,6 +5,7 @@ import { act, openPanel, refreshPanel, panelHead } from './panel.js';
 import { rankBadge } from './badges.js';
 import { exerciseFigure, viewFor } from './figure.js';
 import { mountExercise3D } from './figure3d.js';
+import { initCoach, coachSection, coachAction, coachNext } from './coach.js';
 import { bodyDiagram } from './body.js';
 import {
   MUSCLES, muscleLabel, PROGRAMS, RANKS, rankFor, LIFTS, LEVELS, strengthLevel,
@@ -26,6 +27,7 @@ export function initWorkout({ renderApp }) {
     save();
   }
   handleFriendLink();
+  initCoach({ renderApp, startSession });
   if (state.activeWorkout) startTicker();
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && wui.sessionOpen) keepAwake(true);
@@ -142,9 +144,9 @@ export function workoutTabView() {
   if (!libraryReady()) loadLibrary().then(() => rerenderApp()).catch(() => {});
   const xp = totalXp();
   const { rank, index } = rankFor(xp);
-  const sections = [['seances', 'Séances'], ['exercices', 'Exercices'], ['recup', 'Récup'], ['classement', 'Classement']];
+  const sections = [['seances', 'Séances'], ['exercices', 'Exos'], ['coach', 'Coach'], ['recup', 'Récup'], ['classement', 'Rangs']];
   const pos = (key) => sections.findIndex(([k]) => k === key);
-  const views = { seances: sessionsSection, exercices: exercisesSection, recup: recoverySection, classement: rankingSection };
+  const views = { seances: sessionsSection, exercices: exercisesSection, coach: coachSection, recup: recoverySection, classement: rankingSection };
   return `<main class="screen">
     <div class="header"><div><h1>Muscu</h1><div class="subtitle rank-inline">${rankBadge(index, 22, { shine: false })}${rank.name} · ${n0(xp)} XP</div></div></div>
     <div class="seg glass"><span class="seg-indicator" style="--from:${pos(wui.prevSection)};--to:${pos(wui.section)}"></span>${sections.map(([k, l]) => `<button class="${wui.section === k ? 'active' : ''}" data-wact="section" data-s="${k}">${l}</button>`).join('')}</div>
@@ -218,6 +220,15 @@ function dailyPick() {
 
 function dailyPickCard() {
   if (!libraryReady()) return '<div class="pick-card skeleton"></div>';
+  const cn = coachNext();
+  if (cn && !state.workouts.some((w) => dayKey(new Date(w.end)) === dayKey())) {
+    return `<button class="pick-card" data-x="coach-start" data-id="${cn.day.id}">
+      <div class="pick-text"><small>Ton programme · séance ${cn.index + 1}/${cn.program.days.length}</small><b>${esc(cn.day.name)}</b>
+        <span>${cn.day.exercises.length} exercices · ${cn.day.exercises.reduce((n, e) => n + e.sets, 0)} séries, préparés par ton coach</span>
+        <span class="pick-go">${icon.play} C'est parti</span></div>
+      <span class="pick-fig">${figureFor(cn.day.exercises[0].exId, 118)}</span>
+    </button>`;
+  }
   const doneToday = state.workouts.some((w) => dayKey(new Date(w.end)) === dayKey());
   if (doneToday) {
     return `<div class="pick-card done"><div class="pick-text"><small>Aujourd'hui</small><b>Séance faite, bravo</b><span>Mange tes protéines et dors bien : c'est là que le muscle se construit.</span></div><span class="pick-check">${icon.check}</span></div>`;
@@ -831,6 +842,11 @@ act('ex-photo', (el) => {
   if (ex) openPanel(() => `${panelHead(esc(ex.name), 'Le mouvement en vrai')}${photoMedia(ex)}`);
 });
 
+['coach-begin', 'coach-answer', 'coach-multi', 'coach-none', 'coach-faq', 'coach-restart', 'coach-save', 'coach-start'].forEach((n) => act(n, (el, e) => {
+  if (n === 'coach-start') e.preventDefault();
+  coachAction(n, el);
+}));
+
 act('plates', (el) => {
   const e = state.activeWorkout?.exercises[Number(el.dataset.i)];
   const sets = e?.sets || [];
@@ -996,7 +1012,7 @@ document.addEventListener('click', async (e) => {
       s.done = !s.done;
       if (s.done) {
         const prev = lastPerformance(ex.exId)?.sets[j];
-        if (!s.r) s.r = ex.target || (prev ? String(prev.r) : '8');
+        if (!s.r) s.r = (String(ex.target || '').match(/\d+/) || [])[0] || (prev ? String(prev.r) : '8');
         if (!s.w && prev && num(prev.w) > 0) s.w = String(prev.w);
         const seconds = num(s.w) > 0 ? 90 : 60;
         wui.rest = { end: Date.now() + seconds * 1000 };

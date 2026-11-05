@@ -14,6 +14,15 @@ export const ACCENTS = [
   { key: 'graphite', name: 'Graphite', light: '#23282e', dark: '#eef1f4' },
 ];
 
+// Couleurs exclusives, débloquées en montant de niveau.
+export const LOCKED_ACCENTS = [
+  { key: 'neon', name: 'Néon', light: '#00a389', dark: '#19f5c8', level: 3 },
+  { key: 'lave', name: 'Lave', light: '#d9480f', dark: '#ff6b2c', level: 5 },
+  { key: 'galaxie', name: 'Galaxie', light: '#6741d9', dark: '#9d7bff', level: 8 },
+  { key: 'or-royal', name: 'Or royal', light: '#a87a00', dark: '#f5c542', level: 12 },
+  { key: 'sakura', name: 'Sakura', light: '#d6336c', dark: '#ff9ec0', level: 16 },
+];
+
 const toRgb = (hex) => {
   const n = parseInt(hex.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
@@ -47,7 +56,7 @@ function variants(hex) {
 export function currentAccent() {
   const t = state.theme || {};
   if (t.custom) return { key: 'custom', name: 'Sur mesure', ...variants(t.custom) };
-  return ACCENTS.find((a) => a.key === t.accent) || ACCENTS[0];
+  return [...ACCENTS, ...LOCKED_ACCENTS].find((a) => a.key === t.accent) || ACCENTS[0];
 }
 
 const systemDark = window.matchMedia('(prefers-color-scheme: dark)');

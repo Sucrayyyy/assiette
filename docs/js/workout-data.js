@@ -147,6 +147,24 @@ const GLOSSARY = {
   dos: ['back', 'row'], pecs: ['chest'], pectoraux: ['chest'], extension: ['extension'], squat: ['squat'],
 };
 
+// Noms français pour des exercices courants que la base ne traduit pas.
+const FR_EXTRA = {
+  'f-Straight-Arm_Pulldown': 'Pull-over à la poulie', 'f-Cable_Seated_Lateral_Raise': 'Élévation latérale à la poulie',
+  'f-Dumbbell_Bench_Press': 'Développé couché haltères', 'f-Stiff-Legged_Dumbbell_Deadlift': 'Soulevé de terre jambes tendues haltères',
+  'f-Seated_Leg_Curl': 'Leg curl assis', 'f-Single_Leg_Glute_Bridge': 'Pont fessier une jambe', 'f-Close-Grip_Push-Up_off_of_a_Dumbbell': 'Pompes prise serrée',
+  'f-Machine_Bench_Press': 'Développé couché machine', 'f-Incline_Dumbbell_Flyes': 'Écarté incliné haltères', 'f-Decline_Push-Up': 'Pompes pieds surélevés',
+  'f-Cable_Rope_Rear-Delt_Rows': "Tirage arrière d'épaules à la corde", 'f-Seated_Bent-Over_Rear_Delt_Raise': 'Oiseau assis',
+  'f-Arnold_Dumbbell_Press': 'Développé Arnold', 'f-Handstand_Push-Ups': 'Pompes en équilibre', 'f-Incline_Dumbbell_Curl': 'Curl incliné haltères',
+  'f-Preacher_Curl': 'Curl pupitre', 'f-Triceps_Pushdown_-_Rope_Attachment': 'Extension triceps à la corde',
+  'f-Cable_Rope_Overhead_Triceps_Extension': 'Extension triceps nuque à la poulie', 'f-Standing_Dumbbell_Triceps_Extension': 'Extension triceps haltère',
+  'f-Tricep_Dumbbell_Kickback': 'Kickback triceps', 'f-Hack_Squat': 'Hack squat', 'f-Goblet_Squat': 'Goblet squat',
+  'f-Split_Squat_with_Dumbbells': 'Fentes bulgares haltères', 'f-Ball_Leg_Curl': 'Leg curl sur ballon', 'f-Glute_Kickback': 'Kickback fessier',
+  'f-Butt_Lift_Bridge': 'Pont fessier au sol', 'f-Standing_Dumbbell_Calf_Raise': 'Mollets debout haltères', 'f-Calf_Raise_On_A_Dumbbell': 'Mollets sur une marche',
+  'f-Ab_Roller': 'Roue abdominale', 'f-Reverse_Crunch': 'Crunch inversé', 'f-Dead_Bug': 'Dead bug', 'f-Dumbbell_Shrug': 'Shrugs haltères',
+  'f-Barbell_Shrug': 'Shrugs barre', 'f-Inverted_Row': 'Rowing inversé', 'f-Chin-Up': 'Tractions supination', 'f-Bent_Over_Two-Dumbbell_Row': 'Rowing deux haltères',
+  'f-Barbell_Glute_Bridge': 'Pont fessier barre', 'f-Cable_Crunch': 'Crunch à la poulie',
+};
+
 let library = null;
 let libraryPromise = null;
 
@@ -154,10 +172,10 @@ export function loadLibrary() {
   libraryPromise ??= fetch('data/exercices.json')
     .then((r) => r.json())
     .then((data) => {
-      const list = data.exercises.map(([id, fr, en, p, s, eq, t, lv, img, how]) => ({
-        id, fr, en, name: fr || en, p, s, eq, t, lv, how,
+      const list = data.exercises.map(([id, fr0, en, p, s, eq, t, lv, img, how]) => ({
+        id, fr: fr0 || FR_EXTRA[id] || '', en, name: fr0 || FR_EXTRA[id] || en, p, s, eq, t, lv, how,
         img: img ? data.imgPrefix + img : '',
-        key: normalize(`${fr} ${en}`),
+        key: normalize(`${fr0 || FR_EXTRA[id] || ''} ${en}`),
       }));
       const programIds = new Set(PROGRAMS.flatMap((p) => p.exercises.map(([id]) => id)));
       // Les grands classiques d'abord, puis ceux qui ont un nom français.

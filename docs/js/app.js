@@ -18,6 +18,7 @@ import { realMaintenance, goalProjection, weightTrend, monthCells } from './insi
 import { checkTrophies, trophyCount, TROPHIES } from './trophies.js';
 import { recapBanner } from './recap.js';
 import { initBodyLog, bodyCard } from './bodylog.js';
+import { initRewards, checkRewards, questCard, levelInfo, levelTitle } from './rewards.js';
 import './timer.js';
 import { initWorkout, workoutTabView, sessionAccessory } from './workout.js';
 
@@ -88,6 +89,7 @@ function renderApp() {
   if (state.profile) {
     checkPerfect();
     checkTrophies();
+    checkRewards();
   }
 }
 
@@ -124,6 +126,7 @@ function todayView() {
   const remaining = budget - t.kcal;
   const s = streak();
   const hour = new Date().getHours();
+  const lvl = levelInfo();
   const greeting = hour >= 18 || hour < 5 ? 'Bonsoir' : 'Bonjour';
   const legend = (color, label, value, target, unit) => `<div class="legend-item">
       <div class="label"><span class="dot" style="--c:${color}"></span>${label}</div>
@@ -132,12 +135,14 @@ function todayView() {
 
   return `<main class="screen">
     <div class="header">
-      <div><h1>${greeting} ${esc(p.firstName)}</h1><div class="subtitle">${esc(dayLabel(ui.day))}</div></div>
+      <div><h1>${greeting} ${esc(p.firstName)}</h1>
+        <button class="subtitle level-line" data-x="quests-open"><span>${esc(dayLabel(ui.day))}</span><span class="lvl">Niv. ${lvl.level}</span><span class="lvl-bar" data-level-bar style="--p:${Math.round(lvl.progress * 100)}%"></span></button></div>
       <div class="head-pills">${homeOn('score') ? scorePill(ui.day) : ''}<div class="streak glass ${s ? 'on' : ''}" aria-label="Série de ${s} jours">${icon.flame}<b>${s}</b></div></div>
     </div>
     ${installHintView()}
     ${recapBanner()}
     ${homeOn('week') ? weekView() : ''}
+    ${homeOn('quests') ? questCard(ui.day) : ''}
     <section class="hero glass">
       <div class="hero-top">
         <div style="position:relative">
@@ -541,14 +546,15 @@ function profileView() {
   const t = targets();
   const a = currentAccent();
   const goal = GOALS.find((g) => g.key === p.goal);
+  const lvlP = levelInfo();
   const row = (attrs, ico, title, detail, right = icon.chevron) => `<button class="food" ${attrs}>
       <span class="icon-chip">${ico}</span>
       <div class="info"><div class="name">${title}</div><div class="meta">${detail}</div></div><span class="add">${right}</span></button>`;
   return `<main class="screen">
     <h1>Profil</h1>
     <button class="profile-head glass" data-x="profile-info">
-      <span class="avatar">${esc(p.firstName.slice(0, 1).toUpperCase())}</span>
-      <div class="spacer"><b>${esc(p.firstName)}</b><small>${n1(p.weightKg)} kg · ${p.heightCm} cm · ${p.age} ans</small><small>${esc(goal?.label || '')}${PACES[p.goal] ? ` · ${paceLabel(p.goal, p.pace || defaultPace(p.goal))}` : ''}</small></div>
+      <span class="avatar-ring">${ring(lvlP.progress, ['var(--accent)', 'var(--accent-deep)'], 70, 5)}<span class="avatar">${esc(p.firstName.slice(0, 1).toUpperCase())}</span><i class="avatar-lvl">${lvlP.level}</i></span>
+      <div class="spacer"><b>${esc(p.firstName)}</b><small class="lvl-title">Niveau ${lvlP.level} · ${esc(levelTitle(lvlP.level))}</small><small>${n1(p.weightKg)} kg · ${p.heightCm} cm · ${p.age} ans</small><small>${esc(goal?.label || '')}${PACES[p.goal] ? ` · ${paceLabel(p.goal, p.pace || defaultPace(p.goal))}` : ''}</small></div>
       ${icon.pencil}
     </button>
     <div class="list glass">
@@ -1646,6 +1652,7 @@ initWorkout({ renderApp });
 initModules({ renderApp });
 initSupplements({ renderApp });
 initBodyLog({ renderApp });
+initRewards({ renderApp });
 
 // Glisser vers la droite ou la gauche pour changer de jour.
 bindSwipe(() => (state.profile && ui.tab === 'today' && !ui.sheet ? $app : null), (dir) => {
