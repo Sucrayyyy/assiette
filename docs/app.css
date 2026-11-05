@@ -375,10 +375,19 @@ textarea.input { min-height: 84px; resize: none; line-height: 1.35; font-size: 1
 
 .body-card { display: flex; flex-direction: column; gap: 10px; align-items: center; }
 svg.body { width: 100%; max-width: 360px; height: auto; display: block; }
-svg.body .silhouette { fill: var(--silhouette); }
-svg.body .m { stroke: var(--sheet-bg); stroke-width: 1.2; transition: fill 0.4s; }
+/* Corps détaillé : peau lavande, muscles dessinés, zones travaillées en couleur */
+:root { --b-skin: #dfe2f1; --b-zone: #d3d7ec; --b-line: #a9afd0; --b-hair: #b9bedb; --b-face: #7b82a8; }
+svg.body .b-outline { fill: var(--b-skin); stroke: var(--b-line); stroke-width: 2; }
+svg.body .b-skin { fill: var(--b-skin); stroke: var(--b-line); stroke-width: 1.4; }
+svg.body .b-zone { fill: var(--b-zone); stroke: var(--b-line); stroke-width: 1.4; transition: fill 0.5s ease; }
+svg.body .b-zone.on { fill: var(--mc); }
+svg.body .b-hair { fill: var(--b-hair); }
+svg.body .b-face ellipse { fill: var(--b-face); }
+svg.body .b-face path { stroke: var(--b-face); stroke-width: 6; stroke-linecap: round; }
 svg.body [data-wact] { cursor: pointer; }
-svg.body .body-label { font-size: 13px; font-weight: 700; fill: var(--muted); font-family: inherit; }
+svg.body .body-label { font-size: 34px; font-weight: 700; fill: var(--muted); font-family: inherit; }
+.body-card svg.body .b-zone.on { animation: musclePulse 2.4s ease-in-out infinite; }
+@keyframes musclePulse { 50% { filter: brightness(1.12) saturate(1.15); } }
 .legend-row { display: flex; flex-wrap: wrap; gap: 6px 14px; justify-content: center; font-size: 12px; color: var(--muted); font-weight: 600; }
 .legend-row i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
 
@@ -912,3 +921,119 @@ body.splashing { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .wave, .tp-rays, .supp-card.tier-2 .icon-chip, .supp-card.tier-3, .supp-card.tier-3 .icon-chip, .medal::after { animation: none !important; }
 }
+
+/* ---------- Fiche exercice façon appli de muscu ---------- */
+.ex-media { position: relative; border-radius: 26px; overflow: hidden; aspect-ratio: 3 / 2; background: #e7e8ee; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+.ex-media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ex-media img.f1 { animation: frameSwap 2.6s ease-in-out infinite; }
+@keyframes frameSwap { 0%, 40% { opacity: 0; } 50%, 90% { opacity: 1; } 100% { opacity: 0; } }
+.ex-media.loading img { opacity: 0; }
+.ex-media-fallback { position: absolute; inset: 0; display: none; place-items: center; background: var(--field); }
+.ex-media.failed .ex-media-fallback, .ex-media.loading .ex-media-fallback { display: grid; }
+.ex-media.failed img, .ex-media.failed .ex-media-fig { display: none; }
+.ex-media-fig { position: absolute; right: 10px; bottom: 10px; width: 78px; height: 78px; border-radius: 18px; background: #14141f; display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  --fig-n: #8b93a8; --fig-head: #aab2c5; --fig-eq: #9aa3b2; }
+.how-card { border-radius: 22px; }
+.how-btn { list-style: none; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 15px; border-radius: 22px; cursor: pointer; font-weight: 800; font-size: 17px;
+  background: linear-gradient(180deg, #5cb8ff, #3fa1f5); color: #08121c; box-shadow: 0 5px 0 #2b7fcc, 0 12px 26px rgba(63, 161, 245, 0.3); transition: transform 0.15s, box-shadow 0.15s; }
+.how-btn::-webkit-details-marker { display: none; }
+.how-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #2b7fcc; }
+.how-btn svg { width: 22px; height: 22px; }
+.how-steps { margin: 14px 0 0; padding: 0; list-style: none; counter-reset: step; display: flex; flex-direction: column; gap: 10px; }
+.how-steps li { counter-increment: step; display: flex; gap: 12px; font-size: 15px; line-height: 1.4; animation: stRise 0.4s ease both; }
+.how-steps li::before { content: counter(step); flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-weight: 800; font-size: 13px; display: grid; place-items: center; }
+.muscles-sec { display: flex; flex-direction: column; gap: 12px; }
+.muscles-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.muscles-head h2 { font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
+.legend-mini { display: flex; gap: 12px; font-size: 13px; font-weight: 600; }
+.legend-mini span { display: inline-flex; align-items: center; gap: 6px; }
+.legend-mini i { width: 12px; height: 12px; border-radius: 3px; }
+.muscles-sec .body-card svg.body { max-width: 100%; }
+.muscle-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.mt { padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--ink); }
+.mt.p { background: var(--accent); color: var(--on-accent); }
+.fig-mini.photo { position: relative; overflow: hidden; background: #e7e8ee; }
+.fig-mini.photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.fig-mini.photo img.f1 { animation: frameSwap 2.6s ease-in-out infinite; }
+
+/* ---------- Volume par muscle ---------- */
+.quick-row.three { grid-template-columns: repeat(3, 1fr); }
+.volume-card { display: flex; flex-direction: column; gap: 10px; }
+.vol-row { display: grid; grid-template-columns: 88px 1fr 34px 66px; align-items: center; gap: 8px; }
+.vol-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vol-row b { font-size: 14px; text-align: right; }
+.vol-row small { font-size: 11px; color: var(--muted); font-weight: 600; }
+.vol-track { position: relative; height: 10px; border-radius: 6px; background: rgba(127, 127, 127, 0.16); overflow: hidden; }
+.vol-band { position: absolute; top: 0; bottom: 0; background: rgba(var(--accent-rgb), 0.18); }
+.vol-fill { position: relative; height: 100%; border-radius: 6px; background: var(--c); animation: grow 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; transform-origin: left; }
+.vol-scale { display: none; }
+
+/* ---------- Chrono ---------- */
+.tm-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tm-presets button { border-radius: 18px; padding: 12px; text-align: left; }
+.tm-presets b { display: block; font-size: 16px; }
+.tm-presets small { display: block; font-size: 12px; color: var(--muted); line-height: 1.25; }
+.tm-presets .active { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.tm-presets .active small { color: inherit; opacity: 0.85; }
+.tm-steps { display: flex; flex-direction: column; gap: 10px; }
+.tm-step { display: flex; align-items: center; justify-content: space-between; }
+.tm-step > span { font-weight: 700; }
+.tm-step b { min-width: 64px; text-align: center; font-size: 20px; font-weight: 800; }
+.timer-layer { position: fixed; inset: 0; z-index: 125; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: calc(var(--safe-top) + 18px) 22px calc(var(--safe-bottom) + 30px); color: #fff; transition: background 0.5s; animation: storyIn 0.35s ease; }
+.timer-layer.out { animation: storyOut 0.3s ease forwards; }
+.timer-layer.prep { background: radial-gradient(80% 50% at 50% 40%, #3a4150, #0c0e10); }
+.timer-layer.work { background: radial-gradient(90% 60% at 50% 40%, var(--ad), var(--ad-deep) 60%, #07090b); color: var(--ad-on); }
+.timer-layer.rest { background: radial-gradient(90% 60% at 50% 40%, #4d7cfe, #1a2a70 60%, #07090b); }
+.timer-layer.done { background: radial-gradient(90% 60% at 50% 40%, var(--ad), #07090b); justify-content: center; }
+.tm-top { width: 100%; display: flex; align-items: center; justify-content: space-between; font-weight: 800; font-size: 17px; letter-spacing: 0.04em; text-transform: uppercase; }
+.tm-top .round { background: rgba(255, 255, 255, 0.18); color: inherit; }
+.tm-ring { position: relative; width: 280px; height: 280px; }
+.tm-ring svg { display: block; }
+.tm-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.tm-center small { font-size: 18px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.16em; opacity: 0.85; }
+.tm-center b { font-size: 108px; font-weight: 900; line-height: 1; letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.timer-layer.work .tm-center b { animation: beat 1s ease-in-out infinite; }
+@keyframes beat { 15% { transform: scale(1.05); } 30% { transform: scale(1); } }
+.tm-dots { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; max-width: 320px; }
+.tm-dots i { width: 12px; height: 12px; border-radius: 50%; background: rgba(255, 255, 255, 0.25); }
+.tm-dots i.done { background: rgba(255, 255, 255, 0.9); }
+.tm-dots i.now { background: #fff; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.3); animation: pulse 1s ease-in-out infinite; }
+.tm-actions { display: flex; gap: 12px; }
+.tm-actions .pill, .tm-done .pill { background: rgba(255, 255, 255, 0.2); color: inherit; padding: 14px 28px; font-weight: 800; font-size: 17px; display: inline-flex; align-items: center; gap: 6px; }
+.tm-done { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.tm-done h1 { font-size: 44px; font-weight: 900; }
+.tm-done p { margin: 0 0 10px; font-size: 18px; opacity: 0.85; }
+
+/* ---------- Mon corps ---------- */
+.body-log .pill { display: inline-flex; align-items: center; gap: 4px; font-size: 14px; font-weight: 700; }
+.bl-duo { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; border-radius: 18px; overflow: hidden; height: 190px; padding: 0; }
+.bl-duo img { width: 100%; height: 100%; object-fit: cover; }
+.bl-duo span { position: absolute; bottom: 8px; padding: 4px 10px; border-radius: 999px; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 12px; font-weight: 700; }
+.bl-duo span:nth-of-type(1) { left: 8px; } .bl-duo span:nth-of-type(2) { right: 8px; }
+.bl-measures { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.bl-measures b { display: block; font-size: 20px; font-weight: 800; }
+.bl-measures b small { font-size: 12px; margin-left: 4px; }
+.bl-measures .down { color: var(--accent); } .bl-measures .up { color: #f2a93b; }
+.bl-measures span { font-size: 11px; color: var(--muted); font-weight: 600; }
+.compare { position: relative; aspect-ratio: 3 / 4; border-radius: 24px; overflow: hidden; background: #111; touch-action: pan-y; }
+.compare img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.compare img.before { clip-path: inset(0 calc(100% - var(--x)) 0 0); }
+.cmp-line { position: absolute; top: 0; bottom: 0; left: var(--x); width: 3px; margin-left: -1.5px; background: #fff; box-shadow: 0 0 10px rgba(0, 0, 0, 0.4); pointer-events: none; }
+.cmp-knob { position: absolute; top: 50%; left: var(--x); width: 44px; height: 44px; margin: -22px; border-radius: 50%; background: #fff; color: #111; display: grid; place-items: center; pointer-events: none; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35); }
+.compare input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: ew-resize; margin: 0; }
+.bl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.bl-shot { position: relative; aspect-ratio: 3 / 4; border-radius: 14px; overflow: hidden; background: var(--field); }
+.bl-shot img { width: 100%; height: 100%; object-fit: cover; }
+.bl-shot span { position: absolute; left: 6px; bottom: 6px; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6); }
+.bl-shot .round { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; background: rgba(0, 0, 0, 0.45); color: #fff; }
+.bl-shot .round svg { width: 14px; height: 14px; }
+.bl-history { display: flex; flex-direction: column; gap: 6px; }
+
+/* ---------- Recettes ---------- */
+.list-title.row { display: flex; align-items: center; }
+.recipe-empty { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px; border-radius: 22px; text-align: left; color: var(--accent); }
+.recipe-empty b { display: block; color: var(--ink); }
+.recipe-empty small { display: block; color: var(--muted); font-size: 12.5px; }
+.recipe-sum { display: flex; flex-direction: column; gap: 6px; padding: 14px; }
+.food .stepper-value input { width: 54px; font-size: 16px; }
+.ex-media, .compare, .bl-duo, .water-big, .barbell, .theme-preview { flex-shrink: 0; }

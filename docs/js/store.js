@@ -13,6 +13,7 @@ const defaults = () => ({
   theme: { mode: 'auto', accent: 'emeraude', custom: null },
   home: { week: true, steps: true, water: true, supps: true, score: true },
   trophies: {}, perfectDays: {}, lastBackup: 0, recapSeen: '',
+  recipes: [], measures: [], timerCfg: null,
   // Muscu
   workouts: [], routines: [], friends: [], activeWorkout: null, userId: '',
 });

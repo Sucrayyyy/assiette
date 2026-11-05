@@ -20,6 +20,8 @@ Tes données restent sur ton téléphone.
 - **Citation du jour** animée à chaque ouverture.
 - **Nutri-Score, niveau de transformation et additifs** sur la fiche des produits.
 - **Comme hier** : un repas repris en un geste. **Ajout rapide** : juste les calories, pour le restaurant.
+- **Recettes** : ton plat maison calculé à la part.
+- **Mon corps** : photos avant/après avec curseur de comparaison et mensurations, gardées sur le téléphone.
 - **Hydratation** : un verre en un geste, le niveau monte à l'écran.
 
 ### 💊 Compléments
@@ -46,10 +48,13 @@ Tes données restent sur ton téléphone.
 - **Record détecté en direct** dès que la série est validée, **écran toujours allumé** pendant la séance.
 - **Charger la barre** : les disques dessinés pour chaque poids et l'échauffement calculé.
 - **Surcharge progressive** : à chaque série, tes anciens scores, les poids pré-remplis et la prochaine marche à viser. Records 🏆 détectés automatiquement.
+- **Fiche exercice** : le mouvement en vrai (photos qui s'enchaînent), le personnage animé en médaillon, les étapes et le schéma détaillé des muscles travaillés.
+- **Séries par muscle** sur la semaine, avec la zone 10 à 20 qui fait progresser. **Chrono** Tabata, HIIT, EMOM ou sur mesure.
 - **Récupération** : schéma du corps coloré selon la fatigue de chaque muscle.
 - **Rangs** (Fer → Légende), niveaux de force et **classement entre amis** par lien de partage.
 
 Exercices : [wger](https://wger.de) (CC-BY-SA 4.0) et [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (domaine public).
+Photos des mouvements : free-exercise-db (domaine public). Schéma du corps : [react-native-body-highlighter](https://github.com/HichamELBSI/react-native-body-highlighter) (MIT, © 2022 ELABBASSI Hicham).
 
 ## Version iPhone native (Xcode / AltStore)
 

@@ -178,7 +178,7 @@ function sessionsSection() {
     ${state.activeWorkout
       ? `<button class="cta glass tinted" data-wact="open-session">${icon.dumbbell}<div class="spacer"><b>Reprendre ma séance</b><span>${esc(state.activeWorkout.name)} · <span data-elapsed>${clock(Date.now() - state.activeWorkout.start)}</span></span></div>${icon.chevron}</button>`
       : `${dailyPickCard()}
-        <div class="quick-row"><button class="pill glass" data-wact="start-free">${icon.plus} Séance libre</button><button class="pill glass" data-wact="routine-new">${icon.pencil} Créer une séance</button></div>`}
+        <div class="quick-row three"><button class="pill glass" data-wact="start-free">${icon.plus} Libre</button><button class="pill glass" data-wact="routine-new">${icon.pencil} Créer</button><button class="pill glass" data-x="timer-open">${icon.timer2} Chrono</button></div>`}
     ${routines.length
       ? `<h2>Mes séances</h2><div class="list glass">${routines.map((r) => `<div class="food">
           <button class="info" data-wact="start-routine" data-id="${r.id}" style="text-align:left">
@@ -294,7 +294,33 @@ function recoverySection() {
         <div class="bar-top"><span>${muscleLabel(m)}</span><b>${r.pct} % · ${ago(r.last)}</b></div>
         <div class="bar-track" style="--c:${recoveryColor(r.pct)}"><div class="bar-fill" style="width:${r.pct}%"></div></div>
       </div>`).join('')}
-    </section>` : ''}`;
+    </section>` : ''}
+    ${volumeCard()}`;
+}
+
+// Volume par muscle sur 7 jours : 10 à 20 séries par semaine, c'est la zone qui fait progresser.
+function volumeCard() {
+  const since = Date.now() - 7 * 864e5;
+  const sets = Object.fromEntries(Object.keys(MUSCLES).map((m) => [m, 0]));
+  state.workouts.filter((w) => w.end >= since).forEach((w) => w.exercises.forEach((e) => {
+    e.p.forEach((m) => sets[m] != null && (sets[m] += e.sets.length));
+    e.s.forEach((m) => sets[m] != null && (sets[m] += e.sets.length * 0.5));
+  }));
+  const done = Object.entries(sets).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  const rest = Object.entries(sets).filter(([, v]) => !v).map(([m]) => muscleLabel(m));
+  if (!done.length) return '';
+  const zone = (v) => (v < 10 ? ['#f2a93b', 'léger'] : v <= 20 ? ['var(--accent)', 'idéal'] : ['#ff5e62', 'beaucoup']);
+  return `<section class="card glass volume-card">
+    <div><h2 style="font-size:19px">Séries cette semaine</h2><div class="muted small">La zone 10 à 20 séries par muscle fait progresser</div></div>
+    <div class="vol-scale"><span></span><i style="left:${(10 / 26) * 100}%;width:${(10 / 26) * 100}%"></i></div>
+    ${done.map(([m, v]) => {
+      const [c, label] = zone(v);
+      return `<div class="vol-row"><span class="vol-name">${muscleLabel(m)}</span>
+        <div class="vol-track"><i class="vol-band" style="left:${(10 / 26) * 100}%;width:${(10 / 26) * 100}%"></i><div class="vol-fill" style="width:${Math.min(100, (v / 26) * 100)}%;--c:${c}"></div></div>
+        <b style="color:${c}">${n1(v)}</b><small>${label}</small></div>`;
+    }).join('')}
+    ${rest.length ? `<p class="muted small" style="margin:0">Pas encore travaillés : ${esc(rest.join(', '))}</p>` : ''}
+  </section>`;
 }
 
 function rankingSection() {
@@ -421,7 +447,7 @@ function renderSession(enter = false) {
 function exerciseCard(e, i) {
   const last = lastPerformance(e.exId);
   return `<section class="ex-card glass">
-    <div class="row"><span class="fig-mini">${figureFor(e.exId, 52, false, true)}</span><button class="spacer ex-title" data-wact="exercise-detail" data-id="${esc(e.exId)}">${esc(e.name)}</button>
+    <div class="row">${exerciseThumb(e.exId)}<button class="spacer ex-title" data-wact="exercise-detail" data-id="${esc(e.exId)}">${esc(e.name)}</button>
       <button class="round glass" data-wact="ex-remove" data-i="${i}" aria-label="Retirer">${icon.x}</button></div>
     <div class="chips">${e.p.map((m) => `<span class="chip" style="--c:#ff5e62">${muscleLabel(m)}</span>`).join('')}${e.s.slice(0, 3).map((m) => `<span class="chip" style="--c:#f2a93b">${muscleLabel(m)}</span>`).join('')}</div>
     <div class="hint">${icon.arrowUpRight}<span>${esc(overloadHint(e.exId))}</span></div>
@@ -571,23 +597,26 @@ const sheetHead = (title) => `<div class="sheet-head"><h2>${title}</h2><button c
 function exerciseSheet(sh) {
   const ex = exerciseById(sh.id);
   if (!ex) return sheetHead('Exercice') + '<div class="spinner"></div>';
-  const colors = Object.fromEntries([...ex.s.map((m) => [m, '#f2a93b']), ...ex.p.map((m) => [m, '#ff5e62'])]);
+  const colors = Object.fromEntries([...ex.s.map((m) => [m, SECONDARY]), ...ex.p.map((m) => [m, 'var(--accent)'])]);
   const h = history(ex.id);
+  const steps = howSteps(ex.how);
   const best = h.length ? Math.max(...h.map((x) => x.best)) : null;
   const lift = LIFTS.find((l) => l.id === ex.id);
   const p = state.profile;
   const level = lift && best && p ? strengthLevel(lift, best, p.weightKg, p.sex) : null;
   return `${sheetHead(esc(ex.name))}
     ${ex.fr && ex.en !== ex.fr ? `<div class="muted small" style="margin-top:-10px">${esc(ex.en)}</div>` : ''}
-    <div class="fig-hero">${exerciseFigure(ex, { size: 230, crop: true })}<span class="fig-view">${viewFor(ex) === 'front' ? 'Vue de face' : 'Vue de dos'}</span></div>
-    ${ex.img ? `<details class="photo-toggle"><summary class="link">${icon.photo} Voir une photo réelle</summary>
-      <img class="ex-photo" src="${esc(ex.img)}" alt="" loading="lazy" onerror="this.closest('details').remove()"></details>` : ''}
+    ${exerciseMedia(ex)}
     <div class="chips"><span class="chip" style="--c:var(--accent)">${esc(ex.eq)}</span>
       <span class="chip" style="--c:#4D7CFE">${['', 'Débutant', 'Intermédiaire', 'Avancé'][ex.lv] || 'Tous niveaux'}</span></div>
-    <section class="card glass body-card">${bodyDiagram(colors)}
-      <div class="legend-row"><span><i style="background:#ff5e62"></i>Principal : ${esc(ex.p.map(muscleLabel).join(', '))}</span>
-        ${ex.s.length ? `<span><i style="background:#f2a93b"></i>Secondaire : ${esc(ex.s.map(muscleLabel).join(', '))}</span>` : ''}</div></section>
-    ${ex.how ? `<section class="card glass"><h2 style="font-size:17px">Comment faire</h2><p class="muted" style="margin:8px 0 0;line-height:1.45">${esc(ex.how)}</p></section>` : ''}
+    ${steps.length ? `<details class="how-card"><summary class="how-btn">${icon.bulb}<span>Comment bien le faire ?</span></summary>
+      <ol class="how-steps">${steps.map((t) => `<li>${esc(t)}</li>`).join('')}</ol></details>` : ''}
+    <section class="muscles-sec">
+      <div class="muscles-head"><h2>Muscles travaillés</h2>
+        <div class="legend-mini"><span><i style="background:var(--accent)"></i>Principal</span>${ex.s.length ? `<span><i style="background:${SECONDARY}"></i>Secondaire</span>` : ''}</div></div>
+      <div class="body-card">${bodyDiagram(colors)}</div>
+      <div class="muscle-tags">${ex.p.map((m) => `<span class="mt p">${muscleLabel(m)}</span>`).join('')}${ex.s.map((m) => `<span class="mt">${muscleLabel(m)}</span>`).join('')}</div>
+    </section>
     <section class="card glass" style="display:flex;flex-direction:column;gap:10px">
       <h2 style="font-size:17px">Tes performances</h2>
       ${h.length ? `<div class="mini-stats" style="margin:0">
@@ -602,6 +631,42 @@ function exerciseSheet(sh) {
     ${state.activeWorkout
       ? `<button class="btn btn-primary" data-wact="add-to-session" data-id="${esc(ex.id)}">${icon.plus} Ajouter à ma séance</button>`
       : `<button class="btn btn-primary" data-wact="start-with" data-id="${esc(ex.id)}">${icon.play} Démarrer une séance avec</button>`}`;
+}
+
+const SECONDARY = 'color-mix(in srgb, var(--accent) 42%, var(--b-zone))';
+
+/** Les consignes, découpées en étapes courtes. */
+function howSteps(how) {
+  if (!how) return [];
+  const text = how.replace(/\s+/g, ' ').trim();
+  return (text.match(/[^.!?]+[.!?]*/g) || []).map((t) => t.trim()).filter((t) => t.length > 3).slice(0, 8);
+}
+
+const photoFrames = (ex) => (ex.img ? [ex.img, ex.img.replace(/\/0\.jpg$/, '/1.jpg')] : []);
+
+/**
+ * Le mouvement en vrai : les deux positions photographiées s'enchaînent en boucle,
+ * avec le personnage animé (muscles en couleur) en médaillon. Sans photo, le personnage seul.
+ */
+function exerciseMedia(ex) {
+  const [a, b] = photoFrames(ex);
+  if (!a) {
+    return `<div class="fig-hero">${exerciseFigure(ex, { size: 230, crop: true })}<span class="fig-view">${viewFor(ex) === 'front' ? 'Vue de face' : 'Vue de dos'}</span></div>`;
+  }
+  return `<div class="ex-media loading">
+    <img src="${esc(a)}" alt="" decoding="async" onload="this.parentNode.classList.remove('loading')" onerror="this.parentNode.classList.add('failed')">
+    ${b !== a ? `<img class="f1" src="${esc(b)}" alt="" decoding="async" onerror="this.remove()">` : ''}
+    <span class="ex-media-fig">${exerciseFigure(ex, { size: 78, crop: true })}</span>
+    <span class="ex-media-fallback">${exerciseFigure(ex, { size: 200, crop: true })}</span>
+  </div>`;
+}
+
+/** Vignette de séance : la photo qui bouge si elle existe, sinon le personnage. */
+function exerciseThumb(exId) {
+  const ex = exerciseById(exId);
+  const [a, b] = ex ? photoFrames(ex) : [];
+  if (!a) return `<span class="fig-mini">${figureFor(exId, 52, false, true)}</span>`;
+  return `<span class="fig-mini photo"><img src="${esc(a)}" alt="" loading="lazy" decoding="async"><img class="f1" src="${esc(b)}" alt="" loading="lazy" decoding="async" onerror="this.remove()"></span>`;
 }
 
 function progressChart(h) {

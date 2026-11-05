@@ -10,13 +10,15 @@ import { analyzeMeal, preparePhoto } from './scanner.js';
 import { showSplash } from './splash.js';
 import { esc, icon, COLORS, ring, macroRings, animateRings, animateCounts, levelBars, chips, bar, stepper, toast, haptic, tone } from './ui.js';
 import { applyTheme, currentAccent } from './theme.js';
-import { act, openPanel, refreshPanel, panelHead } from './panel.js';
+import { act, openPanel, refreshPanel, closePanel, panelHead } from './panel.js';
 import { bindSwipe } from './gestures.js';
 import { initSupplements, suppCard } from './supplements.js';
 import { initModules, homeOn, waterTile, scorePill, checkPerfect, STEPS_GOAL } from './modules.js';
 import { realMaintenance, goalProjection, weightTrend, monthCells } from './insights.js';
 import { checkTrophies, trophyCount, TROPHIES } from './trophies.js';
 import { recapBanner } from './recap.js';
+import { initBodyLog, bodyCard } from './bodylog.js';
+import './timer.js';
 import { initWorkout, workoutTabView, sessionAccessory } from './workout.js';
 
 const $app = document.getElementById('app');
@@ -276,6 +278,7 @@ function progressView() {
         : `Objectif ${n1(projection.target)} kg : vers le ${projection.date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: projection.date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' })}, ${projection.measured ? 'à ton rythme actuel' : 'au rythme prévu'}`}</span></div>` : ''}
     </section>
     ${metabolismCard()}
+    ${bodyCard()}
   </main>`;
 }
 
@@ -375,7 +378,7 @@ function resultsMarkup(s) {
   if (q.length < 2) {
     return `<button class="cta glass tinted" data-act="barcode">${icon.barcode}<div class="spacer"><b>Scanner un code-barres</b><span>Les produits de toute l'Europe</span></div>${icon.chevron}</button>
       <button class="link quick-link" data-act="quick-open">${icon.bolt} Ajout rapide : juste les calories</button>` +
-      list('Mes produits', state.customFoods.slice(0, 6)) + list('Récents', state.recents.slice(0, 12)) + list('Idées', SUGGESTIONS) +
+      recipesBlock() + list('Mes produits', state.customFoods.slice(0, 6)) + list('Récents', state.recents.slice(0, 12)) + list('Idées', SUGGESTIONS) +
       `<p class="muted small" style="text-align:center">Tape un aliment ou une marque, ou scanne un code-barres.</p>`;
   }
   return `${s.error ? `<div class="notice">${esc(s.error)}</div>` : ''}
@@ -383,6 +386,96 @@ function resultsMarkup(s) {
     ${s.loading ? '<div class="spinner"></div>' : ''}
     ${!s.loading && !s.results.length ? `<div class="notice">Aucun résultat pour « ${esc(q)} »</div>` : ''}`;
 }
+
+// ---------- Recettes ----------
+
+/** Une recette se comporte comme un aliment : valeurs pour 100 g, une part = le poids total divisé par le nombre de parts. */
+function recipeFood(r) {
+  const m = itemsMacros(r.items);
+  const grams = r.items.reduce((sum, it) => sum + it.grams, 0) || 1;
+  const k = 100 / grams;
+  return {
+    id: `recipe-${r.id}`, name: r.name, brand: `Ma recette · ${r.portions} part${r.portions > 1 ? 's' : ''}`, source: 'recipe',
+    per100: { kcal: m.kcal * k, protein: m.protein * k, carbs: m.carbs * k, fat: m.fat * k, fiber: m.fiber * k },
+    servingG: Math.round(grams / r.portions), servingLabel: '1 part',
+  };
+}
+
+function recipesBlock() {
+  return `<div class="list-title row" style="justify-content:space-between"><span>Mes recettes</span><button class="link" data-x="recipe-new">${icon.plus} Créer</button></div>
+    ${state.recipes.length ? `<div class="list glass">${state.recipes.map((r) => {
+      const f = recipeFood(r);
+      foodIndex.set(f.id, f);
+      return `<div class="food"><span class="ph">${icon.book}</span>
+        <button class="info" data-act="pick-food" data-id="${esc(f.id)}" style="text-align:left"><div class="name">${esc(r.name)}</div><div class="meta">${n0((f.per100.kcal * f.servingG) / 100)} kcal la part · ${r.items.length} ingrédients</div></button>
+        <button class="round glass" data-x="recipe-edit" data-id="${r.id}" aria-label="Modifier">${icon.pencil}</button></div>`;
+    }).join('')}</div>` : '<button class="recipe-empty glass" data-x="recipe-new">' + icon.book + '<span><b>Ta première recette</b><small>Ton plat maison en un geste, calculé à la part</small></span></button>'}`;
+}
+
+let recipeDraft = null;
+
+function recipePanel() {
+  const d = recipeDraft;
+  const total = itemsMacros(d.items);
+  const per = (k) => total[k] / Math.max(d.portions, 1);
+  return `${panelHead(d.isNew ? 'Nouvelle recette' : 'Modifier la recette')}
+    <input class="input" data-recipe="name" value="${esc(d.name)}" placeholder="Nom (ex : Bolognaise maison)">
+    <div class="row" style="justify-content:space-between"><b>Nombre de parts</b>
+      <div class="row"><button class="round glass" data-x="recipe-portions" data-d="-1">${icon.minus}</button><b style="min-width:28px;text-align:center;font-size:20px">${d.portions}</b><button class="round glass" data-x="recipe-portions" data-d="1">${icon.plus}</button></div></div>
+    ${d.items.length ? `<div class="list glass">${d.items.map((it, i) => `<div class="food">
+        <div class="info"><div class="name">${esc(it.name)}</div><div class="meta">${n0(itemMacros(it).kcal)} kcal</div></div>
+        <label class="stepper-value"><input type="number" inputmode="numeric" data-recipe-g="${i}" value="${Math.round(it.grams)}"><span>g</span></label>
+        <button class="round" data-x="recipe-remove" data-i="${i}" aria-label="Retirer">${icon.x}</button></div>`).join('')}</div>` : '<p class="muted" style="margin:0">Ajoute les ingrédients avec leur poids total dans la recette.</p>'}
+    <button class="btn glass" data-x="recipe-add">${icon.plus} Ajouter un ingrédient</button>
+    ${d.items.length ? `<section class="card glass recipe-sum"><div class="muted small">Pour une part</div><div class="big-kcal" style="font-size:38px" data-recipe-kcal>${n0(per('kcal'))} <span>kcal</span></div>
+      <div data-recipe-chips>${chips({ kcal: per('kcal'), protein: per('protein'), carbs: per('carbs'), fat: per('fat'), fiber: per('fiber') })}</div></section>` : ''}
+    <button class="btn btn-primary" data-x="recipe-save" ${d.items.length ? '' : 'disabled'}>Enregistrer</button>
+    ${d.isNew ? '' : `<button class="btn glass btn-danger" data-x="recipe-delete">${icon.trash} Supprimer</button>`}`;
+}
+
+act('recipe-new', () => {
+  recipeDraft = { id: Date.now().toString(36), name: '', portions: 4, items: [], isNew: true };
+  if (ui.sheet) closeSheet();
+  openPanel(recipePanel, { tall: true });
+});
+act('recipe-edit', (el) => {
+  const r = state.recipes.find((x) => x.id === el.dataset.id);
+  if (!r) return;
+  recipeDraft = structuredClone(r);
+  openPanel(recipePanel, { tall: true });
+});
+act('recipe-portions', (el) => {
+  recipeDraft.portions = Math.max(1, Math.min(40, recipeDraft.portions + Number(el.dataset.d)));
+  haptic();
+  refreshPanel();
+});
+act('recipe-remove', (el) => {
+  recipeDraft.items.splice(Number(el.dataset.i), 1);
+  refreshPanel();
+});
+act('recipe-add', () => {
+  closePanel();
+  openSearchSheet({ mode: 'recipe' });
+});
+act('recipe-save', () => {
+  const name = recipeDraft.name.trim();
+  if (!name) return toast('Donne un nom à ta recette', 'info');
+  const { isNew, ...recipe } = recipeDraft;
+  recipe.name = name;
+  state.recipes = [recipe, ...state.recipes.filter((r) => r.id !== recipe.id)];
+  save();
+  closePanel();
+  renderApp();
+  haptic();
+  toast('Recette enregistrée', 'book');
+});
+act('recipe-delete', () => {
+  if (!confirm(`Supprimer la recette ${recipeDraft.name} ?`)) return;
+  state.recipes = state.recipes.filter((r) => r.id !== recipeDraft.id);
+  save();
+  closePanel();
+  renderApp();
+});
 
 function foodRow(f) {
   foodIndex.set(f.id, f);
@@ -411,7 +504,7 @@ function runSearch(s, root) {
     return refresh();
   }
   const words = normalize(q).split(/\s+/).filter(Boolean);
-  const mine = state.customFoods.filter((f) => words.every((w) => normalize(`${f.name} ${f.brand || ''}`).includes(w)));
+  const mine = [...state.recipes.map(recipeFood), ...state.customFoods].filter((f) => words.every((w) => normalize(`${f.name} ${f.brand || ''}`).includes(w)));
   s.results = [...mine, ...searchGeneric(q)];
   s.loading = true;
   refresh();
@@ -473,7 +566,7 @@ function profileView() {
       ${row('data-x="backup-open"', icon.download, 'Sauvegarde', state.lastBackup ? `Faite le ${new Date(state.lastBackup).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : 'Exporter ou restaurer mes données')}
     </div>
     <button class="btn glass btn-danger" data-act="reset">Réinitialiser l'app</button>
-    <p class="muted small" style="text-align:center;margin:0">Aliments : Open Food Facts (licence ODbL) et valeurs moyennes de type CIQUAL.</p>
+    <p class="muted small" style="text-align:center;margin:0">Aliments : Open Food Facts (ODbL). Exercices : free-exercise-db (domaine public) et wger (CC-BY-SA). Schéma du corps : react-native-body-highlighter (MIT).</p>
   </main>`;
 }
 
@@ -634,7 +727,7 @@ function renderSheet() {
   if ((sh.type === 'search' && sh.food) || sh.type === 'portion') content = portionView(sh);
   else if (sh.type === 'search') {
     tall = true;
-    const title = sh.mode === 'pick' ? (sh.index >= 0 ? "C'est plutôt…" : 'Ajouter un ingrédient') : mealOf(sh.meal).label;
+    const title = sh.mode === 'pick' ? (sh.index >= 0 ? "C'est plutôt…" : 'Ajouter un ingrédient') : sh.mode === 'recipe' ? 'Ingrédient de la recette' : mealOf(sh.meal).label;
     content = `<div class="sheet-head"><h2>${esc(title)}</h2><button class="round glass" data-act="close-sheet" aria-label="Fermer">${icon.x}</button></div>${searchBlock(sh.search)}`;
   } else if (sh.type === 'entry') content = entryView(sh);
   else if (sh.type === 'weight') content = weightView(sh);
@@ -680,7 +773,7 @@ function portionView(sh) {
     ${stepper(sh.grams, 'portion-step', 'data-portion')}
     <div class="pills">${presets.map(([l, g]) => `<button class="pill glass ${Math.round(sh.grams) === Math.round(g) ? 'active' : ''}" data-act="portion-preset" data-g="${g}">${esc(l)}</button>`).join('')}</div>
     ${sh.mode === 'log' ? `<div class="field"><span>Repas</span>${mealPicker(sh.meal, 'portion-meal')}</div>` : ''}
-    <button class="btn btn-primary" data-act="portion-confirm">${sh.mode === 'pick' ? 'Utiliser cet aliment' : 'Ajouter au journal'}</button>`;
+    <button class="btn btn-primary" data-act="portion-confirm">${sh.mode === 'pick' ? 'Utiliser cet aliment' : sh.mode === 'recipe' ? 'Ajouter à la recette' : 'Ajouter au journal'}</button>`;
 }
 
 function mealPicker(current, act) {
@@ -1333,7 +1426,11 @@ document.addEventListener('click', (e) => {
       const f = sh.food;
       if (sh.grams <= 0) break;
       pushRecent(f);
-      if (sh.mode === 'pick') {
+      if (sh.mode === 'recipe') {
+        recipeDraft.items.push({ name: f.name, brand: f.brand, grams: sh.grams, per100: f.per100, source: f.source });
+        closeSheet();
+        openPanel(recipePanel, { tall: true });
+      } else if (sh.mode === 'pick') {
         const item = { name: f.name, brand: f.brand, grams: sh.grams, per100: f.per100, source: f.source, confidence: 'haute' };
         if (sh.index >= 0) ui.scan.result.items[sh.index] = item;
         else ui.scan.result.items.push(item);
@@ -1473,6 +1570,16 @@ document.addEventListener('input', (e) => {
     } else if (ui.scan?.result) {
       ui.scan.result.items[Number(t.dataset.i)].grams = g;
     }
+  } else if (t.matches('[data-recipe]')) {
+    recipeDraft[t.dataset.recipe] = t.value;
+  } else if (t.matches('[data-recipe-g]')) {
+    recipeDraft.items[Number(t.dataset.recipeG)].grams = Math.max(0, Number(t.value) || 0);
+    const total = itemsMacros(recipeDraft.items);
+    const per = Object.fromEntries(Object.entries(total).map(([k, v]) => [k, v / recipeDraft.portions]));
+    const kcal = document.querySelector('[data-recipe-kcal]');
+    if (kcal) kcal.innerHTML = `${n0(per.kcal)} <span>kcal</span>`;
+    const ch = document.querySelector('[data-recipe-chips]');
+    if (ch) ch.innerHTML = chips(per);
   } else if (t.matches('[data-quick]')) {
     ui.sheet.draft[t.dataset.quick] = t.value;
   } else if (t.matches('[data-cf]')) {
@@ -1538,6 +1645,7 @@ applyTheme();
 initWorkout({ renderApp });
 initModules({ renderApp });
 initSupplements({ renderApp });
+initBodyLog({ renderApp });
 
 // Glisser vers la droite ou la gauche pour changer de jour.
 bindSwipe(() => (state.profile && ui.tab === 'today' && !ui.sheet ? $app : null), (dir) => {
