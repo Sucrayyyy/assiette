@@ -1037,3 +1037,20 @@ body.splashing { overflow: hidden; }
 .recipe-sum { display: flex; flex-direction: column; gap: 6px; padding: 14px; }
 .food .stepper-value input { width: 54px; font-size: 16px; }
 .ex-media, .compare, .bl-duo, .water-big, .barbell, .theme-preview { flex-shrink: 0; }
+
+/* ---------- Personnage 3D ---------- */
+.ex-3d { position: relative; flex-shrink: 0; aspect-ratio: 1 / 0.86; border-radius: 26px; overflow: hidden; touch-action: pan-y;
+  background: radial-gradient(85% 75% at 50% 42%, #f7f8fa, #dcdfe6 70%, #cdd1d9); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
+.ex3d-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; touch-action: pan-y; opacity: 0; transition: opacity 0.5s; }
+.ex-3d.ready .ex3d-canvas { opacity: 1; }
+.ex-3d.dragging .ex3d-canvas { cursor: grabbing; }
+.ex3d-ph { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity 0.4s; --fig-n: #a3aab5; --fig-head: #b8bec8; }
+.ex-3d.ready .ex3d-ph { opacity: 0; pointer-events: none; }
+.ex-3d:not(.ready):not(.no-3d) .ex3d-ph svg { animation: pulse 1.4s ease-in-out infinite; }
+.ex3d-photo { position: absolute; right: 10px; bottom: 10px; width: 92px; height: 64px; border-radius: 14px; overflow: hidden; background: #111; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); border: 2px solid rgba(255, 255, 255, 0.85); z-index: 2; }
+.ex3d-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ex3d-photo img.f1 { animation: frameSwap 2.6s ease-in-out infinite; }
+.ex3d-hint { position: absolute; left: 12px; bottom: 12px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 999px; background: rgba(20, 22, 28, 0.55); color: #fff; font-size: 12px; font-weight: 700; z-index: 2; pointer-events: none; animation: hintFade 4s ease 1.5s forwards; }
+.ex3d-hint svg { width: 14px; height: 14px; }
+@keyframes hintFade { 80% { opacity: 1; } to { opacity: 0; } }
+.ex-3d.no-3d .ex3d-hint { display: none; }

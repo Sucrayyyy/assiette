@@ -4,6 +4,7 @@ import { esc, icon, toast, animateCounts, confetti, haptic, tone } from './ui.js
 import { act, openPanel, refreshPanel, panelHead } from './panel.js';
 import { rankBadge } from './badges.js';
 import { exerciseFigure, viewFor } from './figure.js';
+import { mountExercise3D } from './figure3d.js';
 import { bodyDiagram } from './body.js';
 import {
   MUSCLES, muscleLabel, PROGRAMS, RANKS, rankFor, LIFTS, LEVELS, strengthLevel,
@@ -586,6 +587,9 @@ function renderWSheet() {
   const tall = sh.type === 'picker' || sh.type === 'routine' || sh.type === 'exercise';
   $wsheet.innerHTML = `<div class="backdrop ${enter}" data-wact="close-sheet"></div>
     <div class="sheet ${tall ? 'tall' : ''} ${enter}"><div class="grabber"></div>${views[sh.type](sh)}</div>`;
+  const host = $wsheet.querySelector('[data-ex3d]');
+  const ex3d = host && exerciseById(host.dataset.ex3d);
+  if (ex3d) mountExercise3D(host, ex3d).catch(() => host.classList.add('no-3d'));
   if (enter) {
     animateCounts($wsheet);
     if (sh.type === 'summary' && sh.celebrate) setTimeout(confetti, 250);
@@ -649,6 +653,16 @@ const photoFrames = (ex) => (ex.img ? [ex.img, ex.img.replace(/\/0\.jpg$/, '/1.j
  * avec le personnage animé (muscles en couleur) en médaillon. Sans photo, le personnage seul.
  */
 function exerciseMedia(ex) {
+  const [a, b] = photoFrames(ex);
+  // Le personnage 3D animé en grand ; la photo du mouvement en vrai en médaillon.
+  return `<div class="ex-3d" data-ex3d="${esc(ex.id)}">
+    <span class="ex3d-ph">${exerciseFigure(ex, { size: 200, crop: true })}</span>
+    ${a ? `<button class="ex3d-photo" data-x="ex-photo" data-id="${esc(ex.id)}" aria-label="Voir le mouvement en photo"><img src="${esc(a)}" alt="" loading="lazy"><img class="f1" src="${esc(b)}" alt="" loading="lazy" onerror="this.remove()"></button>` : ''}
+    <span class="ex3d-hint">${icon.swap} Fais-le tourner</span>
+  </div>`;
+}
+
+function photoMedia(ex) {
   const [a, b] = photoFrames(ex);
   if (!a) {
     return `<div class="fig-hero">${exerciseFigure(ex, { size: 230, crop: true })}<span class="fig-view">${viewFor(ex) === 'front' ? 'Vue de face' : 'Vue de dos'}</span></div>`;
@@ -811,6 +825,11 @@ function panelPlates() {
       ${warm.map((x) => `<div class="row small"><b style="width:86px">${n1(x.w)} kg × ${x.reps}</b><span class="muted">${esc(plateText(x.w, tool.bar))}</span></div>`).join('')}
     </section>` : ''}`;
 }
+
+act('ex-photo', (el) => {
+  const ex = exerciseById(el.dataset.id);
+  if (ex) openPanel(() => `${panelHead(esc(ex.name), 'Le mouvement en vrai')}${photoMedia(ex)}`);
+});
 
 act('plates', (el) => {
   const e = state.activeWorkout?.exercises[Number(el.dataset.i)];

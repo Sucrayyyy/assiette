@@ -48,13 +48,13 @@ Tes données restent sur ton téléphone.
 - **Record détecté en direct** dès que la série est validée, **écran toujours allumé** pendant la séance.
 - **Charger la barre** : les disques dessinés pour chaque poids et l'échauffement calculé.
 - **Surcharge progressive** : à chaque série, tes anciens scores, les poids pré-remplis et la prochaine marche à viser. Records 🏆 détectés automatiquement.
-- **Fiche exercice** : le mouvement en vrai (photos qui s'enchaînent), le personnage animé en médaillon, les étapes et le schéma détaillé des muscles travaillés.
+- **Fiche exercice** : un personnage 3D musclé fait le mouvement en continu (on le fait tourner au doigt), muscles travaillés en rouge, la vraie photo du mouvement en médaillon, les étapes et le schéma détaillé des muscles.
 - **Séries par muscle** sur la semaine, avec la zone 10 à 20 qui fait progresser. **Chrono** Tabata, HIIT, EMOM ou sur mesure.
 - **Récupération** : schéma du corps coloré selon la fatigue de chaque muscle.
 - **Rangs** (Fer → Légende), niveaux de force et **classement entre amis** par lien de partage.
 
 Exercices : [wger](https://wger.de) (CC-BY-SA 4.0) et [free-exercise-db](https://github.com/yuhonas/free-exercise-db) (domaine public).
-Photos des mouvements : free-exercise-db (domaine public). Schéma du corps : [react-native-body-highlighter](https://github.com/HichamELBSI/react-native-body-highlighter) (MIT, © 2022 ELABBASSI Hicham).
+Photos des mouvements : free-exercise-db (domaine public). Moteur 3D : [three.js](https://threejs.org) (MIT) ; le personnage et ses mouvements sont faits pour Assiette. Schéma du corps : [react-native-body-highlighter](https://github.com/HichamELBSI/react-native-body-highlighter) (MIT, © 2022 ELABBASSI Hicham).
 
 ## Version iPhone native (Xcode / AltStore)
 
