@@ -3,8 +3,7 @@ import { state, save, replaceState } from './store.js';
 import { dayKey, totalsOn, targets, burnedOn, stepsOn, lastDays, n0 } from './nutrition.js';
 import { esc, icon, ring, haptic, tone, toast, confetti } from './ui.js';
 import { act, openPanel, refreshPanel, closePanel, panelHead } from './panel.js';
-import { ACCENTS, LOCKED_ACCENTS, currentAccent, setTheme, applyTheme } from './theme.js';
-import { levelInfo } from './rewards.js';
+import { ACCENTS, currentAccent, setTheme, applyTheme } from './theme.js';
 import { dueOn, allTakenOn } from './supplements.js';
 
 export const STEPS_GOAL = 10000;
@@ -177,13 +176,6 @@ function panelTheme() {
         <label class="swatch custom ${t.custom ? 'on' : ''}" aria-label="Couleur sur mesure" ${t.custom ? `style="--s:${t.custom};--s2:${t.custom}"` : ''}><input type="color" data-theme-color value="${t.custom || a.light}"></label>
       </div>
     </div>
-    <div class="field"><span>Couleurs exclusives</span>
-      <div class="swatches">${LOCKED_ACCENTS.map((c) => {
-        const open = levelInfo().level >= c.level;
-        return `<button class="swatch ${open ? '' : 'locked'} ${!t.custom && t.accent === c.key ? 'on' : ''}" data-x="${open ? 'theme-accent' : 'theme-locked'}" data-k="${c.key}" data-l="${c.level}" style="--s:${c.light};--s2:${c.dark}" aria-label="${c.name}${open ? '' : `, niveau ${c.level}`}">${open ? '' : `<span>${c.level}</span>`}</button>`;
-      }).join('')}</div>
-      <small class="muted">Débloquées en montant de niveau : note tes repas, fais tes séances, relève les défis.</small>
-    </div>
     <div class="field"><span>Thème</span>
       <div class="pills mode-pills">${[['auto', 'Auto'], ['light', 'Clair'], ['dark', 'Sombre']].map(([k, l]) => `<button class="pill glass ${mode === k ? 'active' : ''}" data-x="theme-mode" data-k="${k}">${l}</button>`).join('')}</div>
     </div>
@@ -196,10 +188,6 @@ const themeChanged = () => {
   haptic();
 };
 act('theme-open', () => openPanel(panelTheme));
-act('theme-locked', (el) => {
-  haptic([10, 30, 10]);
-  toast(`Débloquée au niveau ${el.dataset.l}`, 'info');
-});
 act('theme-accent', (el) => setTheme({ accent: el.dataset.k, custom: null }, themeChanged));
 act('theme-mode', (el) => setTheme({ mode: el.dataset.k }, themeChanged));
 // Couleur libre : l'aperçu suit le doigt, l'enregistrement se fait à la fermeture du sélecteur.

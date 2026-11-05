@@ -32,10 +32,10 @@ Tes données restent sur ton téléphone.
 
 ### ✨ Le reste
 
-- **Niveaux et XP** : chaque bonne habitude rapporte de l'XP (aliments notés, protéines, eau, pas, compléments, séances, journée parfaite), avec des passages de niveau célébrés et des **couleurs exclusives** à débloquer.
+- **Niveaux et XP** : chaque bonne habitude rapporte de l'XP (aliments notés, protéines, eau, pas, compléments, séances, journée parfaite), avec des passages de niveau célébrés.
 - **Défis du jour** : trois défis chaque matin, et un **coffre** à ouvrir quand ils sont tous faits (bonus d'XP ou gel de série qui protège ta série).
 
-- **Couleur d'accentuation au choix** (10 teintes ou sur mesure), thème clair, sombre ou auto.
+- **Couleur d'accentuation au choix** (15 teintes ou sur mesure), thème clair, sombre ou auto.
 - **Écran d'accueil à la carte** et **score du jour** : tous tes objectifs cochés, c'est une journée parfaite.
 - **Ma semaine** : récap animé façon story, avec une note sur 100 et une image à partager.
 - **32 trophées** à débloquer, avec une vraie célébration.

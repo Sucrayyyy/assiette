@@ -488,16 +488,22 @@ export function startCoachDay(id) {
 // Rendu
 // ---------------------------------------------------------------------------
 
-export const coachAvatar = (size = 40) => `<svg class="coach-avatar" width="${size}" height="${size}" viewBox="0 0 48 48" aria-hidden="true">
-  <defs><linearGradient id="cav" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--ad)"/><stop offset="1" stop-color="var(--ad-deep)"/></linearGradient></defs>
-  <circle cx="24" cy="24" r="24" fill="url(#cav)"/>
-  <circle cx="24" cy="26" r="13" fill="#f3d2b5"/>
-  <path d="M11 22c1-8 6-12 13-12s12 4 13 12c-4-2-8-3-13-3s-9 1-13 3z" fill="#2a2f38"/>
-  <rect x="10.5" y="18.5" width="27" height="4" rx="2" fill="#ff4d4f"/>
-  <circle cx="19.5" cy="26.5" r="1.7" fill="#2a2f38"/><circle cx="28.5" cy="26.5" r="1.7" fill="#2a2f38"/>
-  <path d="M19.5 31.5q4.5 3.5 9 0" stroke="#2a2f38" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-  <path d="M33 33l5 5" stroke="#cfd5dc" stroke-width="2"/><circle cx="39" cy="39" r="2.6" fill="#cfd5dc"/>
-</svg>`;
+// Avatar du coach : une sphère lumineuse à la couleur de l'app, avec un haltère stylisé.
+let avatarId = 0;
+export const coachAvatar = (size = 40, extra = '') => {
+  const id = `cav${++avatarId}`;
+  return `<svg class="coach-avatar ${extra}" width="${size}" height="${size}" viewBox="0 0 48 48" aria-hidden="true">
+    <defs>
+      <radialGradient id="${id}a" cx="35%" cy="28%" r="80%"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset=".28" stop-color="var(--ad)"/><stop offset="1" stop-color="var(--ad-deep)"/></radialGradient>
+      <radialGradient id="${id}b" cx="70%" cy="85%" r="60%"><stop offset="0" stop-color="#4d7cfe" stop-opacity=".55"/><stop offset="1" stop-color="#4d7cfe" stop-opacity="0"/></radialGradient>
+    </defs>
+    <circle cx="24" cy="24" r="23" fill="url(#${id}a)"/>
+    <circle cx="24" cy="24" r="23" fill="url(#${id}b)"/>
+    <circle cx="24" cy="24" r="22.3" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.4"/>
+    <g fill="#fff"><rect x="14" y="18.5" width="4" height="11" rx="2"/><rect x="30" y="18.5" width="4" height="11" rx="2"/>
+      <rect x="10.5" y="21" width="3" height="6" rx="1.5"/><rect x="34.5" y="21" width="3" height="6" rx="1.5"/><rect x="17" y="22.6" width="14" height="2.8" rx="1.4"/></g>
+  </svg>`;
+};
 
 function programCard(p, compact = false) {
   const top = Math.max(20, ...Object.values(p.volume));
@@ -521,13 +527,17 @@ export function coachSection() {
   const log = c.log;
   const fresh = seenCount;
   seenCount = log.length;
+  // Messages du coach groupés : un seul avatar par suite de messages, comme dans une messagerie.
   const bubbles = log.map((m, i) => {
     const cls = `${i >= fresh ? 'new' : ''}`;
-    if (m.kind === 'program' && c.program) return `<div class="bubble-row coach ${cls}"><div class="bubble wide">${programCard(c.program)}
+    const last = log[i + 1]?.from !== m.from || typing && i === log.length - 1;
+    const face = last ? coachAvatar(30) : '<span class="avatar-gap"></span>';
+    if (m.kind === 'program' && c.program) return `<div class="bubble-row coach ${cls}">${face}<div class="bubble wide">${programCard(c.program)}
         <ul class="pc-why">${c.program.why.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>
         <div class="pc-actions"><button class="btn btn-primary" data-x="coach-save">${icon.download} Enregistrer dans mes séances</button></div></div></div>`;
-    if (m.from === 'me') return `<div class="bubble-row me ${cls}"><div class="bubble">${esc(m.text)}</div></div>`;
-    return `<div class="bubble-row coach ${cls}">${coachAvatar(30)}<div class="bubble ${m.tag || ''}">${m.tag === 'keep' ? `<b class="tag">On garde</b>` : m.tag === 'fix' ? `<b class="tag">On corrige</b>` : ''}${esc(m.text)}</div></div>`;
+    if (m.from === 'me') return `<div class="bubble-row me ${cls} ${last ? 'tail' : ''}"><div class="bubble">${esc(m.text)}</div></div>`;
+    const tag = m.tag === 'keep' ? `<span class="tag">${icon.check} On garde</span>` : m.tag === 'fix' ? `<span class="tag">${icon.refresh} On corrige</span>` : '';
+    return `<div class="bubble-row coach ${cls} ${last ? 'tail' : ''}">${typing && i === log.length - 1 ? '<span class="avatar-gap"></span>' : face}<div class="bubble ${m.tag || ''}">${tag}${esc(m.text)}</div></div>`;
   }).join('');
 
   let input = '';
@@ -537,12 +547,13 @@ export function coachSection() {
     input = `<button class="btn btn-primary" data-x="coach-begin">${icon.play} C'est parti</button>`;
   } else if (QUESTIONS[c.step]) {
     const q = QUESTIONS[c.step];
-    input = `<div class="coach-chips">${q.options.map(([v, l]) => `<button class="pill glass ${multiDraft.includes(v) ? 'active' : ''}" data-x="coach-answer" data-v="${v}" data-l="${esc(l)}">${esc(l)}</button>`).join('')}
-      ${q.multi ? `<button class="pill glass" data-x="coach-none">${esc(q.none)}</button>` : ''}</div>
-      ${q.multi && multiDraft.length ? `<button class="btn btn-primary" data-x="coach-multi">Valider (${multiDraft.length})</button>` : ''}`;
+    const short = q.options.every(([, l]) => l.length <= 4);
+    input = `<div class="coach-opts ${short ? 'short' : ''}">${q.options.map(([v, l]) => `<button class="coach-opt ${multiDraft.includes(v) ? 'on' : ''}" data-x="coach-answer" data-v="${v}" data-l="${esc(l)}">
+        <span>${esc(l)}</span>${q.multi ? `<i class="opt-check">${icon.check}</i>` : ''}</button>`).join('')}
+      ${q.multi ? `<button class="coach-opt ${multiDraft.length ? 'go' : 'ghost'}" data-x="${multiDraft.length ? 'coach-multi' : 'coach-none'}"><span>${multiDraft.length ? `Valider (${multiDraft.length})` : esc(q.none)}</span></button>` : ''}</div>`;
   } else if (c.step === 'done') {
-    input = `<div class="coach-chips">${FAQ.map(([k, l]) => `<button class="pill glass" data-x="coach-faq" data-k="${k}" data-l="${esc(l)}">${esc(l)}</button>`).join('')}
-      <button class="pill glass" data-x="coach-restart">${icon.refresh} Refaire le bilan</button></div>`;
+    input = `<div class="coach-suggest"><small class="muted">Une question ?</small><div class="coach-chips">${FAQ.map(([k, l]) => `<button class="pill glass" data-x="coach-faq" data-k="${k}" data-l="${esc(l)}">${esc(l)}</button>`).join('')}
+      <button class="pill glass" data-x="coach-restart">${icon.refresh} Refaire le bilan</button></div></div>`;
   }
 
   return `${next ? `<button class="coach-next" data-x="coach-start" data-id="${next.day.id}">
@@ -550,10 +561,14 @@ export function coachSection() {
       <b>${esc(next.day.name)}</b><span>${next.day.exercises.slice(0, 3).map((e) => esc(e.name)).join(' · ')}${next.day.exercises.length > 3 ? '…' : ''}</span>
       <span class="pick-go">${icon.play} Démarrer</span></button>` : ''}
     <section class="coach-chat">
-      <div class="coach-head">${coachAvatar(46)}<div><b>Coach ${COACH_NAME}</b><small><i class="online"></i>Spécialiste prise de muscle</small></div></div>
-      ${log.length ? '' : `<div class="bubble-row coach new">${coachAvatar(30)}<div class="bubble">Salut ${esc(state.profile?.firstName || '')} ! Je suis ${COACH_NAME}, ton coach. En 7 questions, je regarde ce que tu fais déjà, je garde ce qui marche, je corrige le reste et je te construis un programme pour prendre un max de muscle.</div></div>`}
+      <div class="coach-hero">
+        <span class="coach-orb">${coachAvatar(64, typing ? 'thinking' : '')}</span>
+        <div class="spacer"><b>Coach ${COACH_NAME}</b><small><i class="online"></i>${typing ? 'écrit…' : 'Ton coach prise de muscle'}</small></div>
+        ${c.program ? `<span class="coach-badge">${c.program.daysPerWeek} j / sem.</span>` : ''}
+      </div>
+      ${log.length ? '' : `<div class="bubble-row coach new tail">${coachAvatar(30)}<div class="bubble">Salut ${esc(state.profile?.firstName || '')} ! En 7 questions, je regarde ce que tu fais déjà, je garde ce qui marche, je corrige le reste et je te construis un programme pour prendre un max de muscle.</div></div>`}
       ${bubbles}
-      ${typing ? `<div class="bubble-row coach">${coachAvatar(30)}<div class="bubble typing"><i></i><i></i><i></i></div></div>` : ''}
+      ${typing ? `<div class="bubble-row coach new tail">${coachAvatar(30, 'thinking')}<div class="bubble typing"><i></i><i></i><i></i></div></div>` : ''}
       <div class="coach-input">${input}</div>
       <span class="coach-end"></span>
     </section>`;

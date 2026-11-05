@@ -5,7 +5,6 @@ import { esc, icon, haptic, tone, confetti, ring } from './ui.js';
 import { act, openPanel, refreshPanel, panelHead } from './panel.js';
 import { waterOn, waterGoal, homeOn } from './modules.js';
 import { dueOn, allTakenOn } from './supplements.js';
-import { LOCKED_ACCENTS } from './theme.js';
 
 let rerender = () => {};
 export function initRewards({ renderApp }) {
@@ -80,13 +79,11 @@ export function award(amount, reason) {
 }
 
 function levelUp(level) {
-  const unlocked = LOCKED_ACCENTS.filter((a) => a.level === level);
   const el = document.createElement('div');
   el.className = 'level-up';
   el.innerHTML = `<div class="lu-burst"></div>
     <div class="lu-ring">${ring(1, ['#fff', 'rgba(255,255,255,.6)'], 170, 12, { animate: true })}<b>${level}</b></div>
     <small class="lu-kicker">Niveau supérieur</small><h1>${esc(levelTitle(level))}</h1>
-    ${unlocked.map((a) => `<div class="lu-unlock"><i style="--s:${a.light};--s2:${a.dark}"></i><span>Nouvelle couleur débloquée : <b>${esc(a.name)}</b></span></div>`).join('')}
     <small class="lu-tap">Touche pour continuer</small>`;
   document.body.append(el);
   requestAnimationFrame(() => requestAnimationFrame(() => el.querySelectorAll('.ring-fill').forEach((c) => c.setAttribute('stroke-dashoffset', c.dataset.target))));
@@ -216,13 +213,7 @@ function openChest() {
   const el = document.createElement('div');
   el.className = 'chest-layer';
   el.innerHTML = `<div class="chest-rays"></div>
-    <div class="chest"><svg viewBox="0 0 120 100" aria-hidden="true">
-      <rect x="12" y="44" width="96" height="50" rx="8" fill="#9a5a24"/><rect x="12" y="44" width="96" height="50" rx="8" fill="url(#cg)"/>
-      <rect x="54" y="44" width="12" height="50" fill="#f5c542"/><rect x="12" y="62" width="96" height="6" fill="#f5c542" opacity=".8"/>
-      <g class="lid"><path d="M12 46 Q12 18 60 18 Q108 18 108 46 Z" fill="#b8702e"/><rect x="54" y="20" width="12" height="26" fill="#f5c542"/></g>
-      <rect x="52" y="52" width="16" height="16" rx="3" fill="#ffd96b" stroke="#a87b10" stroke-width="2"/>
-      <defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(255,255,255,.18)"/><stop offset="1" stop-color="rgba(0,0,0,.2)"/></linearGradient></defs>
-    </svg></div>
+    <div class="chest">${chestSvg(200)}</div>
     <div class="chest-reward">${reward.kind === 'xp' ? `<b>+${reward.amount} XP</b>` : `<b>${icon.flame} Gel de série</b>`}<span>${esc(reward.label)}${reward.detail ? ` · ${esc(reward.detail)}` : ''}</span></div>
     <small class="lu-tap">Touche pour continuer</small>`;
   document.body.append(el);
@@ -282,7 +273,41 @@ export function questCard(day) {
   </button>`;
 }
 
-const chestIcon = () => `<svg viewBox="0 0 40 34" width="34" height="30" aria-hidden="true"><rect x="3" y="14" width="34" height="18" rx="3" fill="#a5642a"/><path d="M3 15 Q3 4 20 4 Q37 4 37 15 Z" fill="#c47c36"/><rect x="18" y="4" width="4" height="28" fill="#f5c542"/><rect x="16" y="16" width="8" height="7" rx="1.5" fill="#ffd96b"/></svg>`;
+// Coffre en verre : une lumière à la couleur de l'app brille à l'intérieur, filets dorés, couvercle qui s'ouvre.
+let chestId = 0;
+function chestSvg(size) {
+  const id = `ch${++chestId}`;
+  return `<svg class="chest-svg" viewBox="0 0 160 150" width="${size}" height="${Math.round(size * 0.94)}" aria-hidden="true">
+    <defs>
+      <radialGradient id="${id}c" cx="50%" cy="58%" r="55%"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".25" stop-color="var(--ad)" stop-opacity=".95"/><stop offset="1" stop-color="var(--ad)" stop-opacity="0"/></radialGradient>
+      <linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a414d"/><stop offset="1" stop-color="#161a20"/></linearGradient>
+      <linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff1b8"/><stop offset=".45" stop-color="#f2c14e"/><stop offset="1" stop-color="#b9861c"/></linearGradient>
+      <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+      <linearGradient id="${id}l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a5260"/><stop offset="1" stop-color="#262b33"/></linearGradient>
+    </defs>
+    <ellipse class="chest-shadow" cx="80" cy="140" rx="54" ry="7" fill="#000" opacity=".28"/>
+    <circle class="chest-core" cx="80" cy="96" r="58" fill="url(#${id}c)"/>
+    <g class="chest-body">
+      <rect x="22" y="66" width="116" height="68" rx="16" fill="url(#${id}b)"/>
+      <rect x="22" y="66" width="116" height="68" rx="16" fill="var(--ad)" opacity=".16"/>
+      <rect x="30" y="74" width="100" height="52" rx="10" fill="none" stroke="var(--ad)" stroke-opacity=".55" stroke-width="1.5"/>
+      <rect x="22.75" y="66.75" width="114.5" height="66.5" rx="15.5" fill="none" stroke="url(#${id}g)" stroke-width="1.5"/>
+      <rect x="73" y="66" width="14" height="68" fill="url(#${id}g)"/>
+      <circle cx="80" cy="96" r="12" fill="url(#${id}g)"/>
+      <circle cx="80" cy="96" r="7.5" fill="#1b1f26"/>
+      <path d="M80 90.5l1.7 3.5 3.8.5-2.8 2.6.7 3.8-3.4-1.8-3.4 1.8.7-3.8-2.8-2.6 3.8-.5z" fill="var(--ad)"/>
+    </g>
+    <g class="chest-lid">
+      <path d="M18 66 Q18 34 80 34 Q142 34 142 66 Z" fill="url(#${id}l)"/>
+      <path d="M18 66 Q18 34 80 34 Q142 34 142 66 Z" fill="var(--ad)" opacity=".14"/>
+      <path d="M18.8 65.2 Q19 35 80 35 Q141 35 141.2 65.2" fill="none" stroke="url(#${id}g)" stroke-width="1.5"/>
+      <rect x="73" y="34" width="14" height="32" fill="url(#${id}g)"/>
+      <rect x="16" y="61" width="128" height="9" rx="4.5" fill="url(#${id}g)"/>
+      <path d="M34 50 Q50 40 80 39" fill="none" stroke="url(#${id}s)" stroke-width="5" stroke-linecap="round"/>
+    </g>
+  </svg>`;
+}
+const chestIcon = () => chestSvg(38);
 
 function refreshQuestCard() {
   const el = document.querySelector('[data-quests]');
