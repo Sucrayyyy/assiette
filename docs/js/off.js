@@ -129,6 +129,26 @@ export async function searchOff(query, signal) {
   return foods;
 }
 
+// Nutri-Score, transformation (NOVA) et additifs : à la demande, pour la fiche du produit.
+const infos = new Map();
+export function productInfo(code) {
+  if (!infos.has(code)) {
+    infos.set(code, fetch(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=nutriscore_grade,nova_group,additives_n`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        const p = j?.product;
+        if (!p) return null;
+        const grade = /^[a-e]$/.test(p.nutriscore_grade || '') ? p.nutriscore_grade : null;
+        return { grade, nova: Number(p.nova_group) || null, additives: Number.isFinite(p.additives_n) ? p.additives_n : null };
+      })
+      .catch(() => {
+        infos.delete(code);
+        return null;
+      }));
+  }
+  return infos.get(code);
+}
+
 /** Cherche d'abord dans les catalogues du téléphone, puis dans toute la base mondiale Open Food Facts. */
 export async function productByBarcode(code) {
   const variants = [...new Set([code, code.length === 12 ? `0${code}` : code, code.length === 13 && code.startsWith('0') ? code.slice(1) : code])];

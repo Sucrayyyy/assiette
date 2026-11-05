@@ -1,7 +1,7 @@
 {
   "name": "Assiette",
   "short_name": "Assiette",
-  "description": "Compte tes calories avec un scan IA de tes plats.",
+  "description": "Calories, muscu, pas, eau et compléments : ta journée au même endroit.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",

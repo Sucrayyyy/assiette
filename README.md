@@ -1,6 +1,6 @@
 # Assiette 🥗
 
-Compte tes calories, tes pas et progresse à la salle. Design épuré façon **Liquid Glass**.
+Calories, muscu, pas, eau et compléments : ta journée au même endroit. Design épuré façon **Liquid Glass**, à ta couleur.
 
 ## 📲 Installer sur ton téléphone (gratuit, sans rien télécharger)
 
@@ -18,12 +18,33 @@ Tes données restent sur ton téléphone.
 - **Rythme de perte ou de prise de poids** au choix (−0,25 à −1 kg par semaine, +0,25 ou +0,5 kg), avec les calories par jour affichées.
 - **Pas** : reliés à l'app Santé de l'iPhone avec un raccourci Apple (instructions dans l'app), ou notés à la main. Les calories brûlées s'ajoutent à ta journée.
 - **Citation du jour** animée à chaque ouverture.
+- **Nutri-Score, niveau de transformation et additifs** sur la fiche des produits.
+- **Comme hier** : un repas repris en un geste. **Ajout rapide** : juste les calories, pour le restaurant.
+- **Hydratation** : un verre en un geste, le niveau monte à l'écran.
+
+### 💊 Compléments
+
+- Créatine, whey, vitamines… avec dose, jours de prise et stock restant. La whey compte dans le journal.
+- **Rappels à 16 h, 18 h et 20 h**, seulement si tout n'est pas pris, de plus en plus pressants : sur la carte du jour et en notification, même app fermée.
+- Série de jours et régularité sur 30 jours.
+
+### ✨ Le reste
+
+- **Couleur d'accentuation au choix** (10 teintes ou sur mesure), thème clair, sombre ou auto.
+- **Écran d'accueil à la carte** et **score du jour** : tous tes objectifs cochés, c'est une journée parfaite.
+- **Ma semaine** : récap animé façon story, avec une note sur 100 et une image à partager.
+- **32 trophées** à débloquer, avec une vraie célébration.
+- **Ton vrai métabolisme**, mesuré sur ta courbe de poids et ce que tu manges, et **date estimée** pour ton poids visé.
+- **Calendrier du mois**, gestes natifs (tirer une feuille pour la fermer, glisser pour changer de jour), retour haptique, sauvegarde de tes données.
 - Le scan IA des assiettes est mis en pause pour le moment.
 
 ### 🏋️ Muscu
 
 - **Séances** : libre, perso (tu crées les tiennes) ou programmes prêts (Full body, Push/Pull/Legs, Haut/Bas, Force 5×5, Abdos, Sans matériel).
 - **1 758 exercices**, chacun avec un personnage animé vu de face (ou de dos) et les muscles travaillés en couleur, filtrables par muscle et par matériel.
+- **Séance du jour** : le programme dont les muscles sont les plus reposés.
+- **Record détecté en direct** dès que la série est validée, **écran toujours allumé** pendant la séance.
+- **Charger la barre** : les disques dessinés pour chaque poids et l'échauffement calculé.
 - **Surcharge progressive** : à chaque série, tes anciens scores, les poids pré-remplis et la prochaine marche à viser. Records 🏆 détectés automatiquement.
 - **Récupération** : schéma du corps coloré selon la fatigue de chaque muscle.
 - **Rangs** (Fer → Légende), niveaux de force et **classement entre amis** par lien de partage.
@@ -81,6 +102,16 @@ Avec un identifiant Apple gratuit, l'app doit être resignée tous les 7 jours (
 5. Sur l'iPhone, la première fois : Réglages › Général › VPN et gestion de l'appareil › fais confiance à ton compte développeur.
 
 Avec un compte Apple gratuit, l'app doit être réinstallée depuis Xcode tous les 7 jours (limite d'Apple). Avec un compte développeur payant, elle reste installée un an et peut passer par TestFlight.
+
+## Activer les notifications de compléments
+
+Sur iPhone, une notification app fermée doit venir d'un serveur. Le dossier `push/` en contient un tout petit, gratuit sur Cloudflare, qui ne connaît ni tes compléments ni tes données : il réveille le téléphone, qui écrit lui-même le message.
+
+```bash
+cd push && npm install && npm run setup
+```
+
+La commande demande de se connecter à Cloudflare (compte gratuit), met le serveur en ligne et branche l'app dessus. Sur iPhone, les notifications ne marchent que depuis l'icône ajoutée à l'écran d'accueil (iOS 16.4 ou plus).
 
 ## Activer le scan IA
 

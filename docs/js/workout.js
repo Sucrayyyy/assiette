@@ -1,6 +1,7 @@
 import { state, save, uid } from './store.js';
-import { n0, n1 } from './nutrition.js';
-import { esc, icon, toast, animateCounts, confetti } from './ui.js';
+import { n0, n1, dayKey } from './nutrition.js';
+import { esc, icon, toast, animateCounts, confetti, haptic, tone } from './ui.js';
+import { act, openPanel, refreshPanel, panelHead } from './panel.js';
 import { rankBadge } from './badges.js';
 import { exerciseFigure, viewFor } from './figure.js';
 import { bodyDiagram } from './body.js';
@@ -25,6 +26,23 @@ export function initWorkout({ renderApp }) {
   }
   handleFriendLink();
   if (state.activeWorkout) startTicker();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && wui.sessionOpen) keepAwake(true);
+  });
+}
+
+// L'écran reste allumé pendant la séance, le verrouillage automatique ne coupe plus le chrono.
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on && !wakeLock && navigator.wakeLock) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => (wakeLock = null));
+    } else if (!on && wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+    }
+  } catch { /* refusé : batterie faible, par exemple */ }
 }
 
 // ---------------------------------------------------------------------------
@@ -159,24 +177,60 @@ function sessionsSection() {
         <div class="bar-track" style="--c:${rank.color}"><div class="bar-fill" style="width:${Math.round(progress * 100)}%"></div></div></div>${icon.chevron}</button>
     ${state.activeWorkout
       ? `<button class="cta glass tinted" data-wact="open-session">${icon.dumbbell}<div class="spacer"><b>Reprendre ma séance</b><span>${esc(state.activeWorkout.name)} · <span data-elapsed>${clock(Date.now() - state.activeWorkout.start)}</span></span></div>${icon.chevron}</button>`
-      : `<button class="cta glass tinted" data-wact="start-free">${icon.plus}<div class="spacer"><b>Séance libre</b><span>Ajoute tes exercices au fur et à mesure</span></div>${icon.dumbbell}</button>`}
-    <div class="row"><h2 class="spacer">Mes séances</h2><button class="pill glass" data-wact="routine-new">${icon.plus} Créer</button></div>
+      : `${dailyPickCard()}
+        <div class="quick-row"><button class="pill glass" data-wact="start-free">${icon.plus} Séance libre</button><button class="pill glass" data-wact="routine-new">${icon.pencil} Créer une séance</button></div>`}
     ${routines.length
-      ? `<div class="list glass">${routines.map((r) => `<div class="food">
+      ? `<h2>Mes séances</h2><div class="list glass">${routines.map((r) => `<div class="food">
           <button class="info" data-wact="start-routine" data-id="${r.id}" style="text-align:left">
             <div class="name">${esc(r.name)}</div><div class="meta">${r.exercises.length} exercices · ${esc(musclesSummary(r.exercises))}</div></button>
           <button class="round glass" data-wact="routine-edit" data-id="${r.id}" aria-label="Modifier">${icon.pencil}</button>
           <button class="round glass" data-wact="start-routine" data-id="${r.id}" aria-label="Démarrer">${icon.play}</button>
         </div>`).join('')}</div>`
-      : '<p class="muted small" style="margin:0">Crée tes propres séances : choisis tes exercices, tes séries et tes répétitions.</p>'}
+      : ''}
     <h2>Programmes</h2>
-    <div class="programs carousel">${PROGRAMS.map((p) => `<button class="program glass" data-wact="start-program" data-id="${p.id}">
+    <div class="programs carousel h-scroll">${PROGRAMS.map((p) => `<button class="program glass" data-wact="start-program" data-id="${p.id}">
         <span class="prog-art">${programFigure(p)}</span><b>${esc(p.name)}</b><small class="muted">${p.exercises.length} exercices</small></button>`).join('')}</div>
     ${recent.length ? `<h2>Historique</h2><div class="list glass">${recent.map((w) => `<button class="food" data-wact="workout-detail" data-id="${w.id}">
         <span class="icon-chip">${icon.dumbbell}</span>
         <div class="info"><div class="name">${esc(w.name)}${w.prs.length ? `<span class="pr-mark">${icon.trophy}</span>` : ''}</div>
           <div class="meta">${ago(w.end)} · ${duration(w.end - w.start)} · ${n0(w.volume)} kg · ${w.sets} séries</div></div>
         <span class="num">+${w.xp} XP</span></button>`).join('')}</div>` : ''}`;
+}
+
+// Séance du jour : le programme dont les muscles sont les plus reposés, sans refaire deux fois la même.
+const PICK_POOL = ['full-body', 'push', 'pull', 'legs', 'upper', 'lower'];
+
+function dailyPick() {
+  const rec = recovery();
+  const now = Date.now();
+  const scored = PROGRAMS.filter((p) => PICK_POOL.includes(p.id)).map((p) => {
+    const muscles = [...new Set(p.exercises.flatMap(([id]) => exerciseById(id)?.p || []))].filter((m) => rec[m]);
+    const avg = muscles.reduce((sum, m) => sum + rec[m].pct, 0) / Math.max(muscles.length, 1);
+    const lastDone = Math.max(0, ...state.workouts.filter((w) => w.source?.id === p.id).map((w) => w.end));
+    const freshness = lastDone ? Math.min(1, (now - lastDone) / (72 * 36e5)) : 1;
+    // Le full body va bien pour commencer ; ensuite, les séances ciblées passent devant.
+    const bias = p.id === 'full-body' ? (state.workouts.length ? -8 : 40) : 0;
+    return { program: p, muscles, avg, score: avg - (1 - freshness) * 30 + bias };
+  });
+  return scored.sort((a, b) => b.score - a.score)[0];
+}
+
+function dailyPickCard() {
+  if (!libraryReady()) return '<div class="pick-card skeleton"></div>';
+  const doneToday = state.workouts.some((w) => dayKey(new Date(w.end)) === dayKey());
+  if (doneToday) {
+    return `<div class="pick-card done"><div class="pick-text"><small>Aujourd'hui</small><b>Séance faite, bravo</b><span>Mange tes protéines et dors bien : c'est là que le muscle se construit.</span></div><span class="pick-check">${icon.check}</span></div>`;
+  }
+  const pick = dailyPick();
+  const { program, muscles, avg } = pick;
+  const tired = avg < 65;
+  const names = muscles.slice(0, 3).map(muscleLabel).join(', ');
+  return `<button class="pick-card" data-wact="start-program" data-id="${program.id}">
+    <div class="pick-text"><small>${tired ? 'Plutôt léger aujourd\'hui' : 'Ta séance du jour'}</small><b>${esc(program.name)}</b>
+      <span>${state.workouts.length ? `${esc(names)} : récupérés à ${Math.round(avg)} %` : esc(program.detail)}</span>
+      <span class="pick-go">${icon.play} C'est parti</span></div>
+    <span class="pick-fig">${figureFor(program.exercises[0][0], 118)}</span>
+  </button>`;
 }
 
 function figureFor(exId, size, still = false, crop = false) {
@@ -328,11 +382,13 @@ async function startSession(name, source, items) {
 
 function openSession() {
   wui.sessionOpen = true;
+  keepAwake(true);
   renderSession(true);
 }
 
 function closeSessionLayer() {
   wui.sessionOpen = false;
+  keepAwake(false);
   renderSession();
 }
 
@@ -374,7 +430,7 @@ function exerciseCard(e, i) {
       ${e.sets.map((s, j) => {
         const prev = last?.sets[j];
         return `<div class="set-row ${s.done ? 'done' : ''} ${wui.justDone === `${i}:${j}` ? 'pop' : ''}">
-          <span class="set-n">${j + 1}</span>
+          <span class="set-n">${s.pr ? `<span class="pr-mark">${icon.trophy}</span>` : j + 1}</span>
           <span class="prev">${prev ? setLabel(prev) : '—'}</span>
           <input data-wset="${i}:${j}:w" inputmode="decimal" value="${esc(s.w)}" placeholder="${prev && num(prev.w) > 0 ? n1(num(prev.w)) : '0'}">
           <input data-wset="${i}:${j}:r" inputmode="numeric" value="${esc(s.r)}" placeholder="${esc(e.target || (prev ? String(num(prev.r)) : '8'))}">
@@ -382,7 +438,8 @@ function exerciseCard(e, i) {
         </div>`;
       }).join('')}
     </div>
-    <div class="row"><button class="link" data-wact="set-add" data-i="${i}">${icon.plus} Série</button><span class="spacer"></span>
+    <div class="row"><button class="link" data-wact="set-add" data-i="${i}">${icon.plus} Série</button>
+      ${/Barre/.test(exerciseById(e.exId)?.eq || '') ? `<button class="link" style="margin-left:6px" data-x="plates" data-i="${i}">${icon.dumbbell} Disques</button>` : ''}<span class="spacer"></span>
       ${e.sets.length > 1 ? `<button class="link" style="color:var(--muted)" data-wact="set-remove" data-i="${i}">${icon.minus} Série</button>` : ''}</div>
   </section>`;
 }
@@ -408,7 +465,8 @@ function startTicker() {
       const left = wui.rest.end - Date.now();
       if (left <= 0) {
         wui.rest = null;
-        navigator.vibrate?.([200, 100, 200]);
+        haptic([200, 100, 200]);
+        tone([880, 1175], 0.14, 0.2);
         toast('Repos terminé, à toi', 'timer');
         renderSession();
       } else {
@@ -453,19 +511,22 @@ function finishSession() {
   state.activeWorkout = null;
   save();
   stopTicker();
+  keepAwake(false);
   wui.rest = null;
   wui.sessionOpen = false;
   renderSession();
   const rankedUp = rankFor(xpBefore).index !== rankFor(xpBefore + workout.xp).index;
   openWSheet({ type: 'summary', id: workout.id, xpBefore, celebrate: prs.length > 0 || rankedUp });
   rerenderApp();
-  navigator.vibrate?.([30, 60, 30]);
+  haptic([30, 60, 30]);
+  tone([659, 784, 1047], 0.08, 0.13);
 }
 
 function discardSession() {
   state.activeWorkout = null;
   save();
   stopTicker();
+  keepAwake(false);
   wui.rest = null;
   wui.sessionOpen = false;
   renderSession();
@@ -627,6 +688,89 @@ function workoutSheet(sh) {
 }
 
 // ---------------------------------------------------------------------------
+// Outil barre : disques à charger et échauffement
+// ---------------------------------------------------------------------------
+
+const PLATES = [25, 20, 15, 10, 5, 2.5, 1.25];
+const tool = { kg: 60, bar: 20 };
+
+function loadPlates(total, bar) {
+  let side = (total - bar) / 2;
+  const plates = [];
+  if (side <= 0) return { plates, rest: 0 };
+  for (const p of PLATES) {
+    while (side >= p - 1e-9) {
+      plates.push(p);
+      side -= p;
+    }
+  }
+  return { plates, rest: Math.round(side * 200) / 100 };
+}
+
+const roundTo = (kg) => Math.round(kg / 2.5) * 2.5;
+
+/** Montée en charge classique jusqu'à la série de travail. */
+function warmupSets(kg, bar) {
+  const steps = [[0, 10], [0.4, 8], [0.6, 5], [0.8, 3]];
+  const seen = new Set();
+  return steps.flatMap(([ratio, reps]) => {
+    const w = ratio ? roundTo(kg * ratio) : bar;
+    if (w < bar || w >= kg || seen.has(w)) return [];
+    seen.add(w);
+    return [{ w, reps }];
+  });
+}
+
+const plateText = (kg, bar) => {
+  const { plates } = loadPlates(kg, bar);
+  return plates.length ? `${plates.map((x) => x.toLocaleString('fr-FR')).join(' + ')} de chaque côté` : 'Barre seule';
+};
+
+function panelPlates() {
+  const { plates, rest } = loadPlates(tool.kg, tool.bar);
+  const side = (list) => list.map((p, n) => `<i class="pl p${String(p).replace('.', '_')}" style="--n:${n}"></i>`).join('');
+  const warm = warmupSets(tool.kg, tool.bar);
+  return `${panelHead('Charger la barre')}
+    <div class="stepper plate-kg">
+      <button class="round glass" data-x="tool-kg" data-d="-2.5" aria-label="Moins 2,5 kg">${icon.minus}</button>
+      <label class="stepper-value"><input type="number" inputmode="decimal" data-tool-kg value="${tool.kg}"><span>kg</span></label>
+      <button class="round glass" data-x="tool-kg" data-d="2.5" aria-label="Plus 2,5 kg">${icon.plus}</button>
+    </div>
+    <div class="barbell" aria-label="${esc(plateText(tool.kg, tool.bar))}">
+      <div class="bb-side left">${side(plates)}</div><span class="bb-bar"></span><div class="bb-side right">${side(plates)}</div>
+    </div>
+    <p class="plate-text"><b>${esc(plateText(tool.kg, tool.bar))}</b>${rest ? `<br><small class="muted">Il manque ${n1(rest)} kg pour tomber juste</small>` : ''}</p>
+    <div class="pills mode-pills">${[20, 15, 10].map((b) => `<button class="pill glass ${tool.bar === b ? 'active' : ''}" data-x="tool-bar" data-b="${b}">Barre ${b}</button>`).join('')}</div>
+    ${warm.length ? `<section class="card glass" style="display:flex;flex-direction:column;gap:8px;padding:14px">
+      <h2 style="font-size:17px">Échauffement</h2>
+      ${warm.map((x) => `<div class="row small"><b style="width:86px">${n1(x.w)} kg × ${x.reps}</b><span class="muted">${esc(plateText(x.w, tool.bar))}</span></div>`).join('')}
+    </section>` : ''}`;
+}
+
+act('plates', (el) => {
+  const e = state.activeWorkout?.exercises[Number(el.dataset.i)];
+  const sets = e?.sets || [];
+  const working = sets.find((x) => !x.done && num(x.w) > 0) || [...sets].reverse().find((x) => num(x.w) > 0);
+  tool.kg = working ? num(working.w) : 60;
+  openPanel(panelPlates);
+  haptic();
+});
+act('tool-kg', (el) => {
+  tool.kg = Math.max(0, Math.round((tool.kg + Number(el.dataset.d)) * 100) / 100);
+  haptic();
+  refreshPanel();
+});
+act('tool-bar', (el) => {
+  tool.bar = Number(el.dataset.b);
+  refreshPanel();
+});
+document.addEventListener('change', (e) => {
+  if (!e.target.matches('[data-tool-kg]')) return;
+  tool.kg = Math.max(0, num(e.target.value));
+  refreshPanel();
+});
+
+// ---------------------------------------------------------------------------
 // Amis (partage par lien, sans serveur)
 // ---------------------------------------------------------------------------
 
@@ -773,7 +917,21 @@ document.addEventListener('click', async (e) => {
         const seconds = num(s.w) > 0 ? 90 : 60;
         wui.rest = { end: Date.now() + seconds * 1000 };
         wui.justDone = `${i}:${j}`;
-        navigator.vibrate?.(15);
+        haptic(15);
+        tone([660], 0.04, 0.06);
+        // Record battu en direct, sans attendre la fin de la séance.
+        const previous = bestEver(ex.exId);
+        const score = e1rm(num(s.w), num(s.r));
+        if (previous !== null && score > previous && score > (ex.liveBest || 0)) {
+          ex.liveBest = score;
+          s.pr = true;
+          confetti();
+          haptic([30, 40, 70]);
+          tone([784, 1047, 1319], 0.08, 0.12);
+          toast(`Nouveau record : ${setLabel(s)} !`, 'trophy');
+        }
+      } else {
+        s.pr = false;
       }
       save();
       renderSession();

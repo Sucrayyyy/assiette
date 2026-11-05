@@ -57,12 +57,65 @@ export const icon = {
   steps: svg('<path d="M8 3c-2 0-3 2-3 5s1 5 1 6h4c0-1 1-3 1-6s-1-5-3-5zM6 17h4v1.5a2 2 0 0 1-4 0zM16 7c-2 0-3 2-3 5s1 5 1 6h4c0-1 1-3 1-6s-1-5-3-5zM14 21h4v-.5"/>'),
   refresh: svg('<path d="M20 11a8 8 0 0 0-14.9-3M4 4v4h4M4 13a8 8 0 0 0 14.9 3M20 20v-4h-4"/>'),
   sliders: svg('<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>'),
+  bell: svg('<path d="M6 16V11a6 6 0 1 1 12 0v5l2 3H4zM10 21h4"/>'),
+  bellOff: svg('<path d="M9 5.3A6 6 0 0 1 18 11v3M6 11v5l-2 3h13M10 21h4M3 3l18 18"/>'),
+  palette: svg('<path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-.5-1.5-.5-2.5S14.5 15 16 15h2a3 3 0 0 0 3-3c0-5-4-9-9-9z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15" cy="8" r="1"/>'),
+  pill: svg('<rect x="3.5" y="8.5" width="17" height="7" rx="3.5" transform="rotate(-45 12 12)"/><path d="m9 9 6 6"/>'),
+  capsule: svg('<rect x="8" y="3" width="8" height="18" rx="4"/><path d="M8 12h8"/>'),
+  scoop: svg('<path d="M3 12h11v2a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5zM14 13l7-5"/><path d="M6 12c0-2 1.5-3.5 3-3.5s3 1.5 3 3.5"/>'),
+  drop: svg('<path d="M12 3s7 7 7 12a7 7 0 0 1-14 0c0-5 7-12 7-12z"/>'),
+  medal: svg('<circle cx="12" cy="15" r="6"/><path d="M8 10 5 3h5l2 4 2-4h5l-3 7"/>'),
+  calendar: svg('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/>'),
+  download: svg('<path d="M12 4v11M8 11l4 4 4-4M5 20h14"/>'),
+  upload: svg('<path d="M12 16V5M8 9l4-4 4 4M5 20h14"/>'),
+  scale: svg('<rect x="4" y="4" width="16" height="16" rx="4"/><path d="M8 10a5 5 0 0 1 8 0l-3 2h-2z"/>'),
+  flag: svg('<path d="M5 21V4M5 4c5-2 8 2 14 0v10c-6 2-9-2-14 0"/>'),
+  grid: svg('<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>'),
+  play2: svg('<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z"/>'),
+  copy: svg('<rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
   chevron: svg('<path d="m9 18 6-6-6-6"/>'),
   down: svg('<path d="m6 9 6 6 6-6"/>'),
   arrowUpRight: svg('<path d="M7 17 17 7M8 7h9v9"/>'),
   heart: svg('<path d="M12 20s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z"/>'),
   wave: svg('<path d="M2 12h3l3-7 4 14 3-9 2 2h5"/>'),
 };
+
+// Retour haptique : le vibreur sur Android. Sur iPhone, les apps web n'y ont pas accès, sauf à travers
+// le petit « tic » natif d'un interrupteur iOS, qu'on actionne ici sans l'afficher.
+let hapticLabel = null;
+export function haptic(pattern = 12) {
+  if (navigator.vibrate) {
+    navigator.vibrate(pattern);
+    return;
+  }
+  if (!hapticLabel) {
+    hapticLabel = document.createElement('label');
+    hapticLabel.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden';
+    hapticLabel.innerHTML = '<input type="checkbox" switch tabindex="-1" aria-hidden="true">';
+    document.body.append(hapticLabel);
+  }
+  hapticLabel.click();
+}
+
+// Petits sons de l'app, générés à la volée (aucun fichier à charger).
+let audio = null;
+export function tone(freqs = [1320], gain = 0.1, length = 0.12) {
+  try {
+    audio ??= new (window.AudioContext || window.webkitAudioContext)();
+    audio.resume?.();
+    freqs.forEach((f, i) => {
+      const t = audio.currentTime + i * length * 0.9;
+      const osc = audio.createOscillator();
+      const g = audio.createGain();
+      osc.frequency.value = f;
+      g.gain.setValueAtTime(gain, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + length);
+      osc.connect(g).connect(audio.destination);
+      osc.start(t);
+      osc.stop(t + length + 0.01);
+    });
+  } catch { /* pas de son, tant pis */ }
+}
 
 /** Niveau d'intensité : barres remplies de 1 à `total` (pour l'activité physique). */
 export function levelBars(level, total = 5) {

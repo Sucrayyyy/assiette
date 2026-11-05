@@ -1,0 +1,26 @@
+name = "assiette-rappels"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+# Sites autorisés à s'abonner aux rappels (séparés par des virgules).
+ALLOWED_ORIGINS = "https://sucrayyyy.github.io"
+VAPID_SUBJECT = "https://sucrayyyy.github.io/assiette/"
+VAPID_PUBLIC = ""
+
+# Toutes les heures : chaque téléphone reçoit ses rappels à 16 h, 18 h et 20 h de son fuseau horaire.
+[triggers]
+crons = ["0 * * * *"]
+
+[[kv_namespaces]]
+binding = "RAPPELS"
+# Rempli par « npm run setup ».
+id = "a-remplir"
+
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1002"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60

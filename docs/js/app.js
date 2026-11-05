@@ -1,14 +1,22 @@
 import { state, save, reset, addEntry, updateEntry, deleteEntry, pushRecent, logWeight } from './store.js';
 import {
   ACTIVITIES, GOALS, PACES, MEALS, autoTargets, targets, itemMacros, itemsMacros, entriesOn, totalsOn, defaultPace, minKcal,
-  bmr, stepsOn, stepsKcal, burnedOn, mealForNow, dayKey, dayDate, lastDays, dayLabel, streak, scale, n0, n1,
+  bmr, stepsOn, stepsKcal, burnedOn, mealForNow, dayKey, dayDate, shiftDay, lastDays, dayLabel, streak, scale, n0, n1,
 } from './nutrition.js';
 import { SUGGESTIONS, searchGeneric } from './foods.js';
-import { searchOff, searchCatalog, loadCatalog, productByBarcode, validBarcode } from './off.js';
+import { searchOff, searchCatalog, loadCatalog, productByBarcode, productInfo, validBarcode } from './off.js';
 import { normalize } from './foods.js';
 import { analyzeMeal, preparePhoto } from './scanner.js';
 import { showSplash } from './splash.js';
-import { esc, icon, COLORS, ring, macroRings, animateRings, animateCounts, levelBars, chips, bar, stepper, toast } from './ui.js';
+import { esc, icon, COLORS, ring, macroRings, animateRings, animateCounts, levelBars, chips, bar, stepper, toast, haptic, tone } from './ui.js';
+import { applyTheme, currentAccent } from './theme.js';
+import { act, openPanel, refreshPanel, panelHead } from './panel.js';
+import { bindSwipe } from './gestures.js';
+import { initSupplements, suppCard } from './supplements.js';
+import { initModules, homeOn, waterTile, scorePill, checkPerfect, STEPS_GOAL } from './modules.js';
+import { realMaintenance, goalProjection, weightTrend, monthCells } from './insights.js';
+import { checkTrophies, trophyCount, TROPHIES } from './trophies.js';
+import { recapBanner } from './recap.js';
 import { initWorkout, workoutTabView, sessionAccessory } from './workout.js';
 
 const $app = document.getElementById('app');
@@ -20,7 +28,6 @@ const ZXING_URL = 'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.
 // Le scan IA des assiettes est mis de côté pour le moment (le code reste prêt à être réactivé).
 const AI_SCAN = false;
 const STEPS_SHORTCUT = 'Assiette Pas';
-const STEPS_GOAL = 10000;
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
 let installPrompt = null;
@@ -56,7 +63,11 @@ let shownScan = '';
 function renderApp() {
   const view = state.profile ? `tab:${ui.tab}` : `ob:${ui.ob.step}`;
   // La muscu passe en thème sport sombre.
-  document.body.classList.toggle('sport', !!state.profile && ui.tab === 'muscu');
+  const sport = !!state.profile && ui.tab === 'muscu';
+  if (sport !== document.body.classList.contains('sport')) {
+    document.body.classList.toggle('sport', sport);
+    applyTheme();
+  }
   if (!state.profile) {
     $app.innerHTML = onboardingView();
     animateRings($app);
@@ -72,6 +83,10 @@ function renderApp() {
     animateCounts($app);
   }
   shownView = view;
+  if (state.profile) {
+    checkPerfect();
+    checkTrophies();
+  }
 }
 
 function mainView() {
@@ -116,10 +131,11 @@ function todayView() {
   return `<main class="screen">
     <div class="header">
       <div><h1>${greeting} ${esc(p.firstName)}</h1><div class="subtitle">${esc(dayLabel(ui.day))}</div></div>
-      <div class="streak glass ${s ? 'on' : ''}" aria-label="Série de ${s} jours">${icon.flame}<b>${s}</b></div>
+      <div class="head-pills">${homeOn('score') ? scorePill(ui.day) : ''}<div class="streak glass ${s ? 'on' : ''}" aria-label="Série de ${s} jours">${icon.flame}<b>${s}</b></div></div>
     </div>
     ${installHintView()}
-    ${weekView()}
+    ${recapBanner()}
+    ${homeOn('week') ? weekView() : ''}
     <section class="hero glass">
       <div class="hero-top">
         <div style="position:relative">
@@ -134,24 +150,23 @@ function todayView() {
       </div>
       <div class="bars">${bar('Glucides', t.carbs, g.carbs, COLORS.carbs)}${bar('Lipides', t.fat, g.fat, COLORS.fat)}</div>
     </section>
-    ${stepsCard()}
+    ${homeOn('steps') || homeOn('water') ? `<div class="tiles">${homeOn('steps') ? stepsTile() : ''}${homeOn('water') ? waterTile(ui.day) : ''}</div>` : ''}
+    ${homeOn('supps') ? suppCard(ui.day) : ''}
     <section class="journal glass">${MEALS.map((m) => mealCard(m, entries.filter((e) => e.meal === m.key))).join('')}</section>
   </main>`;
 }
 
-function stepsCard() {
+function stepsTile() {
   const steps = stepsOn(ui.day);
-  const kcal = stepsKcal(steps, state.profile.weightKg);
   const sync = ui.day === dayKey() && state.stepsShortcut;
-  return `<section class="steps-card glass">
-    <button class="steps-main" data-act="open-steps">
-      <span class="icon-chip">${icon.steps}</span>
-      <div class="spacer"><b>${steps ? `<span data-count="${steps}">${n0(steps)}</span> pas` : 'Mes pas'}</b>
-        <small>${steps ? `${n0(kcal)} kcal brûlées${state.stepsToBudget ? ', ajoutées à ta journée' : ''}` : 'Relie Santé ou note-les pour gagner des calories'}</small>
-        <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, (steps / STEPS_GOAL) * 100)}%"></div></div></div>
+  return `<div class="tile steps-tile glass">
+    <button class="tile-main" data-act="open-steps">
+      <span class="tile-ico">${icon.steps}</span>
+      <b>${steps ? n0(steps) : '0'}</b><small>${steps ? `pas · ${n0(stepsKcal(steps, state.profile.weightKg))} kcal` : 'pas'}</small>
+      <div class="bar-track" style="--c:#4d7cfe"><div class="bar-fill" style="width:${Math.min(100, (steps / STEPS_GOAL) * 100)}%"></div></div>
     </button>
-    <button class="round glass" data-act="${sync ? 'steps-sync' : 'open-steps'}" aria-label="${sync ? 'Synchroniser avec Santé' : 'Ajouter mes pas'}">${sync ? icon.refresh : icon.plus}</button>
-  </section>`;
+    <button class="round tile-add" data-act="${sync ? 'steps-sync' : 'open-steps'}" aria-label="${sync ? 'Synchroniser avec Santé' : 'Ajouter mes pas'}">${sync ? icon.refresh : icon.plus}</button>
+  </div>`;
 }
 
 function installHintView() {
@@ -179,7 +194,7 @@ function weekView() {
       const p = totalsOn(day).kcal / goal;
       return `<button class="day glass ${selected ? 'selected' : ''}" data-act="day" data-day="${day}">
         <small>${letter}</small>
-        <div class="mini">${ring(p, selected ? ['#fff', '#fff'] : COLORS.kcal, 32, 4, { showEmpty: false })}<span>${d.getDate()}</span></div>
+        <div class="mini">${ring(p, selected ? ['currentColor', 'currentColor'] : COLORS.kcal, 32, 4, { showEmpty: false })}<span>${d.getDate()}</span></div>
       </button>`;
     })
     .join('')}</div>`;
@@ -194,7 +209,16 @@ function mealCard(meal, entries) {
       <button class="round" data-act="add-meal" data-meal="${meal.key}" aria-label="Ajouter au ${meal.label}">${icon.plus}</button>
     </div>
     ${entries.map(entryRow).join('')}
+    ${entries.length ? '' : copyYesterday(meal)}
   </div>`;
+}
+
+// Repas vide alors qu'il y en avait un hier : le reprendre en un geste.
+function copyYesterday(meal) {
+  const prev = entriesOn(shiftDay(ui.day, -1)).filter((e) => e.meal === meal.key && e.items[0]?.source !== 'supp');
+  if (!prev.length) return '';
+  const kcal = itemsMacros(prev.flatMap((e) => e.items)).kcal;
+  return `<button class="ghost-copy" data-act="copy-meal" data-meal="${meal.key}">${icon.copy}<span>Comme hier</span><small>${esc(prev[0].title.split(' · ')[0])}${prev.length > 1 ? ` +${prev.length - 1}` : ''} · ${n0(kcal)} kcal</small></button>`;
 }
 
 function entryRow(e) {
@@ -232,21 +256,58 @@ function progressView() {
   const walked = stats.filter((x) => x.m.steps > 0);
   const avgSteps = walked.length ? walked.reduce((sum, x) => sum + x.m.steps, 0) / walked.length : 0;
   const average = ui.metric === 'steps' ? avgSteps : avg(ui.metric);
+  const projection = goalProjection();
   return `<main class="screen">
-    <h1>Progrès</h1>
+    <div class="header"><h1>Progrès</h1><button class="pill glass story-pill" data-x="recap-open">${icon.play2} Ma semaine</button></div>
     <div class="stats">
       <div class="stat glass"><span style="color:#ff6a4d">${icon.flame}</span><b>${s}</b><span class="muted small">${s > 1 ? "jours d'affilée" : "jour d'affilée"}</span></div>
       <div class="stat glass"><span style="color:var(--accent)">${icon.check}</span><b>${logged.length}/7</b><span class="muted small">jours notés</span></div>
     </div>
     <div class="pills metric-pills">${Object.entries(metrics).map(([k, [l]]) => `<button class="pill glass ${ui.metric === k ? 'active' : ''}" data-act="metric" data-k="${k}">${l}</button>`).join('')}</div>
     ${chartCard(label, `Moyenne ${n0(average)} ${unit} · objectif ${n0(goal)} ${unit}`, stats, ui.metric, goal, colors)}
+    ${calendarCard()}
     <section class="chart-card glass">
       <div class="row"><div class="spacer"><h2>Poids</h2><div class="big-kcal" style="font-size:28px;margin-top:4px">${n1(weight)} <span>kg</span></div></div>
         <button class="pill glass" data-act="open-weight">${icon.plus} Noter</button></div>
-      ${state.weights.length >= 2 ? `<div class="chart">${weightChart(state.weights.slice(-30))}</div>`
+      ${state.weights.length >= 2 ? `<div class="chart">${weightChart(state.weights.slice(-30), state.profile.targetWeight)}</div>`
         : `<p class="muted small" style="margin:0">Note ton poids régulièrement pour voir ta courbe. Tes objectifs s'ajustent tout seuls.</p>`}
+      ${projection ? `<div class="goal-line">${icon.flag}<span>${projection.reached ? `Objectif de ${n1(projection.target)} kg atteint, bravo !`
+        : projection.stalled ? `Objectif ${n1(projection.target)} kg : choisis un rythme dans ton profil pour estimer la date.`
+        : `Objectif ${n1(projection.target)} kg : vers le ${projection.date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: projection.date.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' })}, ${projection.measured ? 'à ton rythme actuel' : 'au rythme prévu'}`}</span></div>` : ''}
     </section>
+    ${metabolismCard()}
   </main>`;
+}
+
+function calendarCard() {
+  const cells = monthCells();
+  return `<section class="chart-card glass">
+    <div><h2>Ton mois</h2><div class="muted small">Plus c'est foncé, plus la journée est complète</div></div>
+    <div class="cal-grid">${['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d) => `<small>${d}</small>`).join('')}
+      ${cells.map((c) => `<button class="cal-cell lv${c.level} ${c.today ? 'today' : ''} ${c.perfect ? 'perfect' : ''}" data-act="goto-day" data-day="${c.day}" aria-label="${esc(dayLabel(c.day))}">${c.workout ? '<i></i>' : ''}</button>`).join('')}
+    </div>
+    <div class="legend-row"><span><i class="cal-dot"></i>Séance</span><span><i class="cal-gold"></i>Journée parfaite</span></div>
+  </section>`;
+}
+
+function metabolismCard() {
+  const m = realMaintenance();
+  if (!m.ready) {
+    const parts = Math.min(1, m.loggedDays / 10) * 0.6 + Math.min(1, m.weighIns / 3) * 0.4;
+    return `<section class="chart-card glass">
+      <div class="row"><span class="icon-chip">${icon.bolt}</span><div class="spacer"><b>Ton vrai métabolisme</b><div class="muted small">Encore ${Math.max(0, 10 - m.loggedDays)} jours notés et ${Math.max(0, 3 - m.weighIns)} pesées pour le mesurer</div></div></div>
+      <div class="bar-track" style="--c:var(--accent);margin:0"><div class="bar-fill" style="width:${Math.round(parts * 100)}%"></div></div>
+    </section>`;
+  }
+  const p = state.profile;
+  const formula = autoTargets({ ...p, tdeeOverride: 0, goal: 'maintien' }).kcal;
+  const used = !!p.tdeeOverride;
+  return `<section class="chart-card glass">
+    <div class="row"><span class="icon-chip">${icon.bolt}</span><div class="spacer"><b>Ton vrai métabolisme</b><div class="muted small">Mesuré sur ${m.loggedDays} jours et ${m.weighIns} pesées</div></div></div>
+    <div class="big-kcal" style="font-size:34px">${n0(m.kcal)} <span>kcal par jour</span></div>
+    <p class="muted small" style="margin:0">La formule annonçait ${n0(formula)} kcal. Ton poids évolue de ${m.perWeek > 0 ? '+' : ''}${n1(Math.round(m.perWeek * 100) / 100)} kg par semaine pour ${n0(m.avg)} kcal mangées.</p>
+    <button class="btn ${used ? 'glass' : 'btn-primary'}" data-act="use-tdee" data-v="${used ? 0 : m.kcal}" style="font-size:15px;padding:12px">${used ? 'Revenir à la formule' : 'Caler mes objectifs là-dessus'}</button>
+  </section>`;
 }
 
 function chartCard(title, subtitle, stats, key, goal, colors) {
@@ -277,16 +338,19 @@ function chartCard(title, subtitle, stats, key, goal, colors) {
   </section>`;
 }
 
-function weightChart(weights) {
+function weightChart(weights, target) {
   const W = 320;
   const H = 120;
   const kgs = weights.map((w) => w.kg);
-  const min = Math.min(...kgs) - 1;
-  const max = Math.max(...kgs) + 1;
-  const pts = weights.map((w, i) => [(i / Math.max(weights.length - 1, 1)) * (W - 12) + 6, H - ((w.kg - min) / (max - min)) * H]);
+  const min = Math.min(...kgs, target || Infinity) - 1;
+  const max = Math.max(...kgs, target || -Infinity) + 1;
+  const px = (i) => (i / Math.max(weights.length - 1, 1)) * (W - 12) + 6;
+  const py = (kg) => H - ((kg - min) / (max - min)) * H;
+  const trend = weightTrend(weights);
   return `<svg viewBox="0 0 ${W} ${H + 8}">
-    <polyline points="${pts.map((p) => p.join(',')).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-    ${pts.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="4" fill="var(--accent)"/>`).join('')}
+    ${target ? `<line x1="0" x2="${W}" y1="${py(target)}" y2="${py(target)}" stroke="currentColor" stroke-dasharray="5 4" opacity="0.45"/>` : ''}
+    ${weights.map((w, i) => `<circle cx="${px(i)}" cy="${py(w.kg)}" r="3" fill="var(--accent)" opacity="0.35"/>`).join('')}
+    <polyline class="draw-line" pathLength="100" points="${trend.map((v, i) => `${px(i)},${py(v)}`).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>`;
 }
 
@@ -309,7 +373,8 @@ function resultsMarkup(s) {
   const q = s.query.trim();
   const list = (title, foods) => (foods.length ? `${title ? `<div class="list-title">${title}</div>` : ''}<div class="list glass">${foods.map(foodRow).join('')}</div>` : '');
   if (q.length < 2) {
-    return `<button class="cta glass tinted" data-act="barcode">${icon.barcode}<div class="spacer"><b>Scanner un code-barres</b><span>Les produits de toute l'Europe</span></div>${icon.chevron}</button>` +
+    return `<button class="cta glass tinted" data-act="barcode">${icon.barcode}<div class="spacer"><b>Scanner un code-barres</b><span>Les produits de toute l'Europe</span></div>${icon.chevron}</button>
+      <button class="link quick-link" data-act="quick-open">${icon.bolt} Ajout rapide : juste les calories</button>` +
       list('Mes produits', state.customFoods.slice(0, 6)) + list('Récents', state.recents.slice(0, 12)) + list('Idées', SUGGESTIONS) +
       `<p class="muted small" style="text-align:center">Tape un aliment ou une marque, ou scanne un code-barres.</p>`;
   }
@@ -381,44 +446,74 @@ function runSearch(s, root) {
 function profileView() {
   const p = state.profile;
   const t = targets();
-  const custom = !!p.customTargets;
-  const select = (key, options) =>
-    `<select class="input" data-pf="${key}">${options.map(([v, l]) => `<option value="${v}" ${String(p[key]) === String(v) ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
-  const targetRow = (key, label, unit) =>
-    custom
-      ? `<label class="field"><span>${label} (${unit})</span><input class="input" type="number" inputmode="numeric" data-target="${key}" value="${Math.round(t[key])}"></label>`
-      : `<div class="row" style="justify-content:space-between"><span>${label}</span><b>${n0(t[key])} ${unit}</b></div>`;
-
+  const a = currentAccent();
+  const goal = GOALS.find((g) => g.key === p.goal);
+  const row = (attrs, ico, title, detail, right = icon.chevron) => `<button class="food" ${attrs}>
+      <span class="icon-chip">${ico}</span>
+      <div class="info"><div class="name">${title}</div><div class="meta">${detail}</div></div><span class="add">${right}</span></button>`;
   return `<main class="screen">
     <h1>Profil</h1>
-    <section class="card glass" style="display:flex;flex-direction:column;gap:12px">
-      <label class="field"><span>Prénom</span><input class="input" data-pf="firstName" value="${esc(p.firstName)}" autocomplete="given-name"></label>
-      <div class="grid2">
-        <label class="field"><span>Sexe</span>${select('sex', [['homme', 'Homme'], ['femme', 'Femme']])}</label>
-        <label class="field"><span>Âge</span><input class="input" type="number" inputmode="numeric" data-pf="age" value="${p.age}"></label>
-        <label class="field"><span>Taille (cm)</span><input class="input" type="number" inputmode="numeric" data-pf="heightCm" value="${p.heightCm}"></label>
-        <label class="field"><span>Poids (kg)</span><input class="input" type="number" inputmode="decimal" step="0.1" data-pf="weightKg" value="${p.weightKg}"></label>
-      </div>
-      <label class="field"><span>Activité</span>${select('activity', ACTIVITIES.map((a) => [a.key, a.label]))}</label>
-      <label class="field"><span>Objectif</span>${select('goal', GOALS.map((g) => [g.key, g.label]))}</label>
-      ${PACES[p.goal] ? `<label class="field"><span>Rythme</span><select class="input" data-pf="pace">${PACES[p.goal].map((x) => `<option value="${x.kg}" ${Number(p.pace || defaultPace(p.goal)) === x.kg ? 'selected' : ''}>${paceLabel(p.goal, x.kg)} · ${x.label}</option>`).join('')}</select></label>` : ''}
-    </section>
-    <section class="card glass" style="display:flex;flex-direction:column;gap:12px">
-      <h2>Mes objectifs par jour</h2>
-      <div class="pills">
-        <button class="pill glass ${custom ? '' : 'active'}" data-act="targets-mode" data-mode="auto">Calculés</button>
-        <button class="pill glass ${custom ? 'active' : ''}" data-act="targets-mode" data-mode="custom">Personnalisés</button>
-      </div>
-      ${targetRow('kcal', 'Calories', 'kcal')}${targetRow('protein', 'Protéines', 'g')}${targetRow('fiber', 'Fibres', 'g')}
-      ${targetRow('carbs', 'Glucides', 'g')}${targetRow('fat', 'Lipides', 'g')}
-      <p class="muted small" style="margin:0">Calculés avec la formule de Mifflin-St Jeor selon ton profil, ton activité et ton rythme.</p>
-    </section>
-    <button class="card glass row" data-act="open-steps" style="text-align:left"><span class="icon-chip">${icon.steps}</span>
-      <div class="spacer"><b>Mes pas</b><div class="muted small">${state.stepsShortcut ? 'Reliés à Santé avec Raccourcis' : 'Relie Santé pour compter tes pas'}</div></div>${icon.chevron}</button>
+    <button class="profile-head glass" data-x="profile-info">
+      <span class="avatar">${esc(p.firstName.slice(0, 1).toUpperCase())}</span>
+      <div class="spacer"><b>${esc(p.firstName)}</b><small>${n1(p.weightKg)} kg · ${p.heightCm} cm · ${p.age} ans</small><small>${esc(goal?.label || '')}${PACES[p.goal] ? ` · ${paceLabel(p.goal, p.pace || defaultPace(p.goal))}` : ''}</small></div>
+      ${icon.pencil}
+    </button>
+    <div class="list glass">
+      ${row('data-x="profile-targets"', icon.target, 'Mes objectifs', `${n0(t.kcal)} kcal · ${n0(t.protein)} g de protéines`)}
+      ${row('data-x="supp-open"', icon.pill, 'Compléments', state.supps.length ? `${state.supps.length} au programme${state.suppNotif?.on ? ' · rappels actifs' : ''}` : 'Avec rappels à 16 h, 18 h et 20 h')}
+      ${row('data-act="open-steps"', icon.steps, 'Mes pas', state.stepsShortcut ? 'Reliés à Santé' : 'Relie Santé ou note-les')}
+    </div>
+    <div class="list glass">
+      ${row('data-x="trophies-open"', icon.trophy, 'Trophées', `${trophyCount()} sur ${TROPHIES.length} débloqués`)}
+      ${row('data-x="recap-open"', icon.play2, 'Ma semaine', 'Ton récap animé, à partager')}
+    </div>
+    <div class="list glass">
+      ${row('data-x="theme-open"', icon.palette, 'Apparence', esc(a.name), `<i class="accent-dot"></i>${icon.chevron}`)}
+      ${row('data-x="home-open"', icon.grid, "Écran d'accueil", 'Choisis ce qui s\'affiche')}
+      ${row('data-x="backup-open"', icon.download, 'Sauvegarde', state.lastBackup ? `Faite le ${new Date(state.lastBackup).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}` : 'Exporter ou restaurer mes données')}
+    </div>
     <button class="btn glass btn-danger" data-act="reset">Réinitialiser l'app</button>
     <p class="muted small" style="text-align:center;margin:0">Aliments : Open Food Facts (licence ODbL) et valeurs moyennes de type CIQUAL.</p>
   </main>`;
 }
+
+const pfSelect = (key, options) => {
+  const p = state.profile;
+  return `<select class="input" data-pf="${key}">${options.map(([v, l]) => `<option value="${v}" ${String(p[key]) === String(v) ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+};
+
+act('profile-info', () => openPanel(() => {
+  const p = state.profile;
+  return `${panelHead('Mes infos')}
+    <label class="field"><span>Prénom</span><input class="input" data-pf="firstName" value="${esc(p.firstName)}" autocomplete="given-name"></label>
+    <div class="grid2">
+      <label class="field"><span>Sexe</span>${pfSelect('sex', [['homme', 'Homme'], ['femme', 'Femme']])}</label>
+      <label class="field"><span>Âge</span><input class="input" type="number" inputmode="numeric" data-pf="age" value="${p.age}"></label>
+      <label class="field"><span>Taille (cm)</span><input class="input" type="number" inputmode="numeric" data-pf="heightCm" value="${p.heightCm}"></label>
+      <label class="field"><span>Poids (kg)</span><input class="input" type="number" inputmode="decimal" step="0.1" data-pf="weightKg" value="${p.weightKg}"></label>
+    </div>
+    <label class="field"><span>Activité</span>${pfSelect('activity', ACTIVITIES.map((a) => [a.key, a.label]))}</label>
+    <label class="field"><span>Objectif</span>${pfSelect('goal', GOALS.map((g) => [g.key, g.label]))}</label>
+    ${PACES[p.goal] ? `<label class="field"><span>Rythme</span><select class="input" data-pf="pace">${PACES[p.goal].map((x) => `<option value="${x.kg}" ${Number(p.pace || defaultPace(p.goal)) === x.kg ? 'selected' : ''}>${paceLabel(p.goal, x.kg)} · ${x.label}</option>`).join('')}</select></label>` : ''}`;
+}, { tall: true }));
+
+act('profile-targets', () => openPanel(() => {
+  const p = state.profile;
+  const t = targets();
+  const custom = !!p.customTargets;
+  const targetRow = (key, label, unit) =>
+    custom
+      ? `<label class="field"><span>${label} (${unit})</span><input class="input" type="number" inputmode="numeric" data-target="${key}" value="${Math.round(t[key])}"></label>`
+      : `<div class="row" style="justify-content:space-between"><span>${label}</span><b>${n0(t[key])} ${unit}</b></div>`;
+  return `${panelHead('Mes objectifs par jour')}
+    <div class="pills">
+      <button class="pill glass ${custom ? '' : 'active'}" data-act="targets-mode" data-mode="auto">Calculés</button>
+      <button class="pill glass ${custom ? 'active' : ''}" data-act="targets-mode" data-mode="custom">Personnalisés</button>
+    </div>
+    ${targetRow('kcal', 'Calories', 'kcal')}${targetRow('protein', 'Protéines', 'g')}${targetRow('fiber', 'Fibres', 'g')}
+    ${targetRow('carbs', 'Glucides', 'g')}${targetRow('fat', 'Lipides', 'g')}
+    <p class="muted small" style="margin:0">${p.tdeeOverride ? 'Calculés sur ton métabolisme mesuré, selon ton rythme.' : 'Calculés avec la formule de Mifflin-St Jeor selon ton profil, ton activité et ton rythme.'}</p>`;
+}));
 
 function paceLabel(goal, kg) {
   return `${goal === 'perte' ? '−' : '+'}${kg.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} kg / semaine`;
@@ -545,6 +640,7 @@ function renderSheet() {
   else if (sh.type === 'weight') content = weightView(sh);
   else if (sh.type === 'steps') content = stepsView(sh);
   else if (sh.type === 'custom-food') content = customFoodView(sh);
+  else if (sh.type === 'quick') content = quickView(sh);
   const enter = shownSheet !== sh ? 'enter' : '';
   shownSheet = sh;
   $sheet.innerHTML = `<div class="backdrop ${enter}" data-act="close-sheet"></div><div class="sheet ${tall ? 'tall' : ''} ${enter}"><div class="grabber"></div>${content}</div>`;
@@ -552,6 +648,23 @@ function renderSheet() {
     sh.focused = true;
     $sheet.querySelector('[data-search-input]')?.focus();
   }
+  if (sh.food) hydrateNutri(sh.food);
+}
+
+// Nutri-Score et transformation : affichés dès qu'Open Food Facts répond, sans bloquer la fiche.
+async function hydrateNutri(food) {
+  const code = /^off-(\d{8,14})$/.exec(food.id || '')?.[1];
+  if (!code) return;
+  const info = await productInfo(code);
+  const el = $sheet.querySelector('[data-nutri]');
+  if (!el || !info || ui.sheet?.food !== food || (!info.grade && !info.nova && info.additives == null)) return;
+  const NOVA = { 1: 'Brut', 2: 'Peu transformé', 3: 'Transformé', 4: 'Ultra-transformé' };
+  el.innerHTML = `<div class="nutri">
+    ${info.grade ? `<div class="ns" aria-label="Nutri-Score ${info.grade.toUpperCase()}">${['a', 'b', 'c', 'd', 'e'].map((g) => `<span class="ns-${g} ${g === info.grade ? 'on' : ''}">${g.toUpperCase()}</span>`).join('')}</div>` : ''}
+    <div class="nutri-tags">
+      ${info.nova ? `<span class="nova n${info.nova}">${NOVA[info.nova]}</span>` : ''}
+      ${info.additives != null ? `<span class="nova ${info.additives > 2 ? 'n4' : info.additives ? 'n3' : 'n1'}">${info.additives ? `${info.additives} additif${info.additives > 1 ? 's' : ''}` : 'Sans additif'}</span>` : ''}
+    </div></div>`;
 }
 
 function portionView(sh) {
@@ -563,6 +676,7 @@ function portionView(sh) {
       <button class="round glass" data-act="close-sheet" aria-label="Fermer">${icon.x}</button></div>
     <div class="big-kcal" data-live-kcal>${n0(m.kcal)} <span>kcal</span></div>
     <div data-live-chips>${chips(m)}</div>
+    <div data-nutri></div>
     ${stepper(sh.grams, 'portion-step', 'data-portion')}
     <div class="pills">${presets.map(([l, g]) => `<button class="pill glass ${Math.round(sh.grams) === Math.round(g) ? 'active' : ''}" data-act="portion-preset" data-g="${g}">${esc(l)}</button>`).join('')}</div>
     ${sh.mode === 'log' ? `<div class="field"><span>Repas</span>${mealPicker(sh.meal, 'portion-meal')}</div>` : ''}
@@ -588,9 +702,20 @@ function entryView(sh) {
     <button class="btn glass btn-danger" data-act="entry-delete">${icon.trash} Supprimer du journal</button>`;
 }
 
+function quickView(sh) {
+  const field = (key, label, unit, big) => `<label class="field"><span>${label}${unit ? ` (${unit})` : ''}</span><input class="input" data-quick="${key}" inputmode="${key === 'name' ? 'text' : 'decimal'}" ${key === 'name' ? 'placeholder="Ex : Restaurant, sandwich…"' : 'placeholder="0"'} ${big ? 'style="font-size:28px;font-weight:800;text-align:center"' : ''}></label>`;
+  return `<div class="sheet-head"><h2 class="spacer">Ajout rapide</h2><button class="round glass" data-act="close-sheet" aria-label="Fermer">${icon.x}</button></div>
+    ${field('kcal', 'Calories', 'kcal', true)}
+    <div class="grid2">${field('protein', 'Protéines', 'g')}${field('fiber', 'Fibres', 'g')}${field('carbs', 'Glucides', 'g')}${field('fat', 'Lipides', 'g')}</div>
+    ${field('name', 'Nom (facultatif)')}
+    <div class="field"><span>Repas</span>${mealPicker(sh.meal, 'quick-meal')}</div>
+    <button class="btn btn-primary" data-act="quick-save">Ajouter au journal</button>`;
+}
+
 function weightView(sh) {
   return `<div class="sheet-head"><h2 class="spacer">Mon poids aujourd'hui</h2><button class="round glass" data-act="close-sheet" aria-label="Fermer">${icon.x}</button></div>
     <label class="field"><span>Poids (kg)</span><input class="input" type="number" inputmode="decimal" step="0.1" data-weight value="${sh.kg}" style="font-size:28px;font-weight:800;text-align:center"></label>
+    <label class="field"><span>Poids visé (facultatif)</span><input class="input" type="number" inputmode="decimal" step="0.5" data-target-weight value="${state.profile.targetWeight || ''}" placeholder="Pour estimer la date d'arrivée"></label>
     <button class="btn btn-primary" data-act="weight-save">Enregistrer</button>`;
 }
 
@@ -933,21 +1058,6 @@ function closeBarcode() {
   $barcode.innerHTML = '';
 }
 
-// Petit bip de confirmation (le vibreur n'existe pas sur iPhone pour les apps web).
-function beep() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.frequency.value = 1320;
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.12);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.13);
-  } catch { /* pas de son, tant pis */ }
-}
-
 async function onBarcode(code) {
   const b = ui.barcode;
   if (b?.busy) return;
@@ -958,8 +1068,8 @@ async function onBarcode(code) {
     const msg = $barcode.querySelector('[data-cam-msg]');
     if (msg) msg.textContent = `Code ${code} · recherche…`;
   }
-  navigator.vibrate?.(30);
-  beep();
+  haptic(30);
+  tone([1320], 0.12, 0.12);
   try {
     const custom = state.customFoods.find((f) => f.code === code);
     const food = custom || (await productByBarcode(code.trim()));
@@ -984,9 +1094,53 @@ document.addEventListener('click', (e) => {
   const sh = ui.sheet;
   const sc = ui.scan;
   const i = Number(el.dataset.i);
+  if (['tab', 'day', 'add-meal', 'ob-pick', 'ob-next', 'barcode', 'portion-confirm', 'copy-meal', 'quick-save', 'weight-save'].includes(act)) haptic();
 
   switch (act) {
     // Navigation
+    case 'goto-day':
+      ui.day = el.dataset.day;
+      ui.tab = 'today';
+      ui.animate = true;
+      renderApp();
+      window.scrollTo(0, 0);
+      break;
+    case 'use-tdee':
+      state.profile.tdeeOverride = Number(el.dataset.v) || null;
+      if (state.profile.tdeeOverride) state.profile.customTargets = null;
+      save();
+      renderApp();
+      toast(state.profile.tdeeOverride ? 'Objectifs recalés sur ton métabolisme' : 'Retour à la formule', 'bolt');
+      break;
+    case 'copy-meal': {
+      const prev = entriesOn(shiftDay(ui.day, -1)).filter((x) => x.meal === el.dataset.meal && x.items[0]?.source !== 'supp');
+      prev.forEach(({ id, createdAt, photo, ...entry }) => addEntry({ ...structuredClone(entry), day: ui.day }));
+      renderApp();
+      toast('Repris comme hier', 'copy');
+      break;
+    }
+    case 'quick-open':
+      openSheet({ type: 'quick', meal: sh?.meal || mealForNow(), draft: {} });
+      break;
+    case 'quick-meal':
+      sh.meal = el.dataset.meal;
+      $sheet.querySelectorAll('.meals button').forEach((b) => b.classList.toggle('active', b.dataset.meal === sh.meal));
+      break;
+    case 'quick-save': {
+      const num = (k) => Math.max(0, Number(String(sh.draft[k] ?? '').replace(',', '.')) || 0);
+      if (!num('kcal')) {
+        toast('Indique au moins les calories', 'info');
+        $sheet.querySelector('[data-quick="kcal"]')?.focus();
+        break;
+      }
+      const name = (sh.draft.name || '').trim() || 'Ajout rapide';
+      addEntry({ day: ui.day, meal: sh.meal, title: name, items: [{ name, grams: 100, per100: { kcal: num('kcal'), protein: num('protein'), carbs: num('carbs'), fat: num('fat'), fiber: num('fiber') }, source: 'quick' }] });
+      closeSheet();
+      ui.tab = 'today';
+      renderApp();
+      toast('Ajouté au journal');
+      break;
+    }
     case 'tab':
       ui.tab = el.dataset.tab;
       ui.animate = ui.tab === 'today';
@@ -1135,6 +1289,8 @@ document.addEventListener('click', (e) => {
     case 'weight-save': {
       const kg = Number(String($sheet.querySelector('[data-weight]').value).replace(',', '.'));
       if (kg > 20 && kg < 400) {
+        const goalKg = Number(String($sheet.querySelector('[data-target-weight]').value).replace(',', '.'));
+        state.profile.targetWeight = goalKg > 20 && goalKg < 400 ? goalKg : null;
         logWeight(kg, dayKey());
         closeSheet();
         renderApp();
@@ -1267,6 +1423,7 @@ document.addEventListener('click', (e) => {
       state.profile.customTargets = el.dataset.mode === 'custom' ? autoTargets(state.profile) : null;
       save();
       renderApp();
+      refreshPanel();
       break;
     case 'save-key': {
       const key = $app.querySelector('[data-apikey]').value.trim();
@@ -1285,6 +1442,7 @@ document.addEventListener('click', (e) => {
     case 'reset':
       if (confirm('Tout effacer ? Ton profil et ton journal seront supprimés.')) {
         reset();
+        applyTheme();
         ui.ob.step = 0;
         ui.tab = 'today';
         renderApp();
@@ -1315,6 +1473,8 @@ document.addEventListener('input', (e) => {
     } else if (ui.scan?.result) {
       ui.scan.result.items[Number(t.dataset.i)].grams = g;
     }
+  } else if (t.matches('[data-quick]')) {
+    ui.sheet.draft[t.dataset.quick] = t.value;
   } else if (t.matches('[data-cf]')) {
     ui.sheet.draft[t.dataset.cf] = t.value;
   } else if (t.matches('[data-entry-title]')) {
@@ -1344,6 +1504,7 @@ document.addEventListener('change', (e) => {
       if (key === 'goal') state.profile.pace = defaultPace(value);
       save();
       renderApp();
+      refreshPanel();
     }
   } else if (t.matches('[data-target]')) {
     state.profile.customTargets[t.dataset.target] = Math.max(0, Number(t.value) || 0);
@@ -1373,7 +1534,21 @@ window.addEventListener('beforeinstallprompt', (e) => {
   if (state.profile && ui.tab === 'today') renderApp();
 });
 
+applyTheme();
 initWorkout({ renderApp });
+initModules({ renderApp });
+initSupplements({ renderApp });
+
+// Glisser vers la droite ou la gauche pour changer de jour.
+bindSwipe(() => (state.profile && ui.tab === 'today' && !ui.sheet ? $app : null), (dir) => {
+  const next = shiftDay(ui.day, dir);
+  if (next > dayKey()) return;
+  ui.day = next;
+  ui.animate = true;
+  haptic();
+  renderApp();
+  $app.querySelector('.screen')?.classList.add(dir > 0 ? 'swipe-next' : 'swipe-prev');
+});
 
 // Nouveau jour pendant que l'app est ouverte, ou retour du raccourci Santé.
 document.addEventListener('visibilitychange', () => {

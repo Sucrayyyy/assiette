@@ -4,7 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <title>Assiette</title>
-  <meta name="description" content="Compte tes calories avec un scan IA de tes plats.">
+  <meta name="description" content="Calories, muscu, pas, eau et compléments : ta journée au même endroit.">
+  <script>
+    /* Avant le premier affichage : évite un flash clair quand le thème sombre est forcé. */
+    try { var t = JSON.parse(localStorage.getItem('assiette.v1') || '{}').theme; if (t && (t.mode === 'dark' || t.mode === 'light')) document.documentElement.dataset.theme = t.mode; } catch (e) {}
+  </script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Assiette">
@@ -22,6 +26,7 @@
   <div id="session" class="sport"></div>
   <div id="sheet"></div>
   <div id="wsheet" class="sport"></div>
+  <div id="panel"></div>
   <div id="barcode"></div>
   <input type="file" id="photo-camera" accept="image/*" capture="environment" hidden>
   <input type="file" id="photo-library" accept="image/*" hidden>

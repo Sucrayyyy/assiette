@@ -52,7 +52,8 @@ export function bmr({ sex, weightKg, heightCm, age }) {
 
 export function autoTargets(p) {
   const factor = ACTIVITIES.find((a) => a.key === p.activity)?.factor ?? 1.2;
-  const tdee = bmr(p) * factor;
+  // Métabolisme mesuré sur la courbe de poids s'il a été adopté, sinon la formule.
+  const tdee = p.tdeeOverride || bmr(p) * factor;
   const daily = ((p.pace || defaultPace(p.goal)) * 7700) / 7;
   let kcal = tdee;
   if (p.goal === 'perte') kcal = Math.max(tdee - daily, minKcal(p));
