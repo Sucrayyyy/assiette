@@ -7,11 +7,15 @@ import { b64urlEncode } from './src/webpush.js';
 const say = (text) => console.log(`\n▸ ${text}`);
 const wrangler = (args, options = {}) => spawnSync('npx', ['wrangler', ...args], { encoding: 'utf8', ...options });
 
-// Affiche la sortie tout en la gardant : wrangler peut poser des questions (sous-domaine workers.dev).
+// Affiche la sortie tout en la gardant. Sur Mac, « script » donne à wrangler un vrai terminal :
+// il peut alors poser ses questions (choix du sous-domaine workers.dev à la première mise en ligne).
 function teed(args) {
   return new Promise((resolve, reject) => {
     let out = '';
-    const child = spawn('npx', ['wrangler', ...args], { stdio: ['inherit', 'pipe', 'inherit'] });
+    const [cmd, cmdArgs] = process.platform === 'darwin'
+      ? ['script', ['-q', '/dev/null', 'npx', 'wrangler', ...args]]
+      : ['npx', ['wrangler', ...args]];
+    const child = spawn(cmd, cmdArgs, { stdio: ['inherit', 'pipe', 'inherit'] });
     child.stdout.on('data', (d) => {
       out += d;
       process.stdout.write(d);
@@ -57,8 +61,11 @@ if (toml.includes('id = "a-remplir"')) {
 writeFileSync('wrangler.toml', toml);
 
 say('Mise en ligne');
+console.log("  Si Cloudflare demande un sous-domaine workers.dev (première fois seulement) :");
+console.log('  réponds y, tape un nom (par exemple assiette-theo), puis y pour confirmer.');
 const deployed = await teed(['deploy']);
-const url = deployed.match(/https:\/\/[a-z0-9.-]+\.workers\.dev/)?.[0];
+// L'adresse du serveur commence par son nom (la première fois, wrangler affiche aussi celle du sous-domaine).
+const url = deployed.match(/https:\/\/assiette-rappels\.[a-z0-9-]+\.workers\.dev/)?.[0];
 if (!url) throw new Error('Adresse du serveur introuvable dans la réponse de Cloudflare.');
 
 say('Clé privée (stockée côté Cloudflare, jamais dans le code)');
