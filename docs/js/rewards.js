@@ -4,6 +4,7 @@ import { dayKey, shiftDay, entriesOn, totalsOn, targets, stepsOn, n0 } from './n
 import { esc, icon, haptic, tone, confetti, ring } from './ui.js';
 import { act, openPanel, refreshPanel, panelHead } from './panel.js';
 import { waterOn, waterGoal, homeOn } from './modules.js';
+import { burst, flyTo, pulse } from './fx.js';
 import { dueOn, allTakenOn } from './supplements.js';
 
 let rerender = () => {};
@@ -54,6 +55,8 @@ function showPop() {
   document.body.append(el);
   tone([988, 1319], 0.05, 0.07);
   haptic(10);
+  const bar = document.querySelector('[data-level-bar]');
+  if (bar) setTimeout(() => flyTo(el.querySelector('b'), bar, { size: 12, onArrive: () => pulse(bar, 'fx-glow', 700) }), 450);
   setTimeout(() => el.classList.add('out'), 1500);
   setTimeout(() => {
     el.remove();
@@ -179,10 +182,12 @@ export function checkRewards() {
       }
     });
     const quests = questsOf(day);
-    quests.forEach((q) => {
+    const fresh = [];
+    quests.forEach((q, i) => {
       if (q.done && !d.got[`q-${q.key}`]) {
         d.got[`q-${q.key}`] = true;
         award(q.xp, `Défi : ${q.text}`);
+        fresh.push(i);
       }
     });
     if (quests.every((q) => q.done) && !d.chest) {
@@ -192,6 +197,8 @@ export function checkRewards() {
     }
     save();
     refreshQuestCard();
+    fresh.forEach((i) => setTimeout(() => burst(document.querySelectorAll('[data-quests] .qd')[i], { colors: ['#ffd25e', 'var(--accent)', '#fff'], count: 12, spread: 34, size: 5 }), 250));
+    if (d.chest === 'ready' && fresh.length) setTimeout(() => burst(document.querySelector('[data-quests] .chest-mini'), { colors: ['#ffd25e', '#f2c14e', '#fff'], count: 18, spread: 50 }), 600);
   }, 600);
 }
 

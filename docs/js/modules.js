@@ -5,6 +5,7 @@ import { esc, icon, ring, haptic, tone, toast, confetti } from './ui.js';
 import { act, openPanel, refreshPanel, closePanel, panelHead } from './panel.js';
 import { ACCENTS, currentAccent, setTheme, applyTheme } from './theme.js';
 import { dueOn, allTakenOn } from './supplements.js';
+import { burst, flyTo } from './fx.js';
 
 export const STEPS_GOAL = 10000;
 let rerender = () => {};
@@ -39,7 +40,7 @@ export function waterTile(day) {
   </div>`;
 }
 
-function addWater(day, ml) {
+function addWater(day, ml, from) {
   const before = waterOn(day);
   const next = Math.max(0, before + ml);
   state.water = { ...state.water, [day]: next };
@@ -57,9 +58,12 @@ function addWater(day, ml) {
   });
   refreshScore();
   refreshPanel();
+  const glass = document.querySelector(`.tile[data-water-day="${day}"] .liquid, .water-big[data-water-day="${day}"] .liquid`);
+  if (ml > 0 && from && glass) flyTo(from, glass, { color: '#40b0ff', size: 12, onArrive: () => burst(glass, { colors: ['#40b0ff', '#9fd8ff', '#fff'], count: 8, spread: 26, size: 4 }) });
   if (before < waterGoal() && next >= waterGoal()) {
     tone([784, 1047], 0.07, 0.12);
     toast('Objectif eau atteint', 'drop');
+    setTimeout(() => burst(glass, { colors: ['#40b0ff', '#9fd8ff', '#ffd25e', '#fff'], count: 22, spread: 70, size: 6 }), 700);
   }
 }
 
@@ -85,7 +89,7 @@ function panelWater(day) {
 
 act('water-add', (el) => {
   const day = el.closest('[data-water-day]')?.dataset.waterDay || document.querySelector('[data-water-day]')?.dataset.waterDay || dayKey();
-  addWater(day, Number(el.dataset.ml));
+  addWater(day, Number(el.dataset.ml), el);
 });
 act('water-open', (el) => openPanel(panelWater(el.closest('[data-water-day]')?.dataset.waterDay || dayKey())));
 

@@ -1229,3 +1229,53 @@ body.splashing { overflow: hidden; }
 .pc-vrow b { text-align: right; }
 .pc-why { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.4; }
 .pc-actions .btn { font-size: 15px; padding: 13px; }
+
+/* ===================================================================== */
+/* Effets de récompense (js/fx.js)                                        */
+/* ===================================================================== */
+#fx-layer { position: fixed; inset: 0; pointer-events: none; z-index: 170; overflow: hidden; }
+.fx-spark { position: fixed; border-radius: 50%; will-change: transform, opacity; }
+.fx-spark.star { border-radius: 2px; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); }
+.fx-ring { position: fixed; width: 28px; height: 28px; margin: -14px; border-radius: 50%; border: 2px solid; will-change: transform, opacity; }
+.fx-orb { position: fixed; border-radius: 50%; will-change: transform, opacity; }
+
+/* Vague de lumière sous le doigt */
+.btn, .pill, .cta, .coach-opt, .food, .option, .tile-main, .supp-chip, .quest-card, .tab, .catalog-item, .water-add-row button, .tm-presets button { position: relative; overflow: hidden; }
+.fx-wave { position: absolute; border-radius: 50%; background: currentColor; pointer-events: none; will-change: transform, opacity; }
+
+/* Petits rebonds réutilisables */
+.fx-pulse { animation: fxPulse 0.6s cubic-bezier(0.3, 1.6, 0.5, 1); }
+.fx-bump { display: inline-block; animation: fxBump 0.45s cubic-bezier(0.3, 1.8, 0.5, 1); }
+.fx-tab svg { animation: fxTab 0.5s cubic-bezier(0.3, 1.8, 0.5, 1); }
+.tab.fx-tab svg, .fx-tab > svg { animation: fxTab 0.5s cubic-bezier(0.3, 1.8, 0.5, 1); }
+.fx-glow { animation: fxGlow 0.9s ease-out; }
+.fx-flame { animation: fxFlame 1s ease-out; }
+.fx-flame svg { animation: fxFlicker 1s ease-in-out; }
+@keyframes fxPulse { 40% { transform: scale(1.08); } }
+@keyframes fxBump { 40% { transform: scale(1.18); } }
+@keyframes fxTab { 0% { transform: scale(1); } 35% { transform: scale(1.35) translateY(-3px); } 70% { transform: scale(0.92); } 100% { transform: none; } }
+@keyframes fxGlow { 0% { filter: brightness(1) drop-shadow(0 0 0 transparent); transform: scale(1); } 30% { filter: brightness(1.25) drop-shadow(0 0 16px rgba(var(--accent-rgb), 0.85)); transform: scale(1.045); } 100% { filter: none; transform: none; } }
+@keyframes fxFlame { 30% { transform: scale(1.18); box-shadow: 0 0 0 4px rgba(255, 106, 77, 0.25), 0 8px 26px rgba(255, 106, 77, 0.5); } }
+@keyframes fxFlicker { 20% { transform: scale(1.4) rotate(-8deg); } 45% { transform: scale(1.15) rotate(6deg); } 70% { transform: scale(1.3) rotate(-4deg); } }
+
+/* Anneau rempli : il garde une lueur discrète */
+.ring-layer.done .ring-fill { filter: drop-shadow(0 0 5px var(--glow)); }
+.ring-layer.done { animation: none; }
+
+/* Coches qui se dessinent */
+.set-row.done.pop .check svg path, .supp-chip.pop .ck svg path, .qd.on svg path, .score-row.ok .icon-chip svg path, .quest-row.ok .icon-chip svg path {
+  stroke-dasharray: 24; stroke-dashoffset: 24; animation: drawCheck 0.42s 0.06s cubic-bezier(0.6, 0, 0.3, 1) forwards; }
+@keyframes drawCheck { to { stroke-dashoffset: 0; } }
+.set-row.done.pop { animation: rowWipe 0.5s ease-out; }
+@keyframes rowWipe { from { background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.35) 0%, transparent 0%); } 50% { background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.3) 60%, transparent 100%); } }
+
+/* Barres qui se remplissent : un reflet passe une fois */
+.bar-fill { position: relative; overflow: hidden; }
+.bar-fill::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent); }
+.screen.enter .bar-fill::after, .sheet.enter .bar-fill::after { animation: barShine 1s 0.9s ease-out; }
+@keyframes barShine { to { transform: translateX(100%); } }
+.lvl-bar.fx-glow::after { box-shadow: 0 0 10px var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-pulse, .fx-bump, .fx-glow, .fx-flame, .fx-tab svg, .set-row.done.pop, .bar-fill::after { animation: none !important; }
+}

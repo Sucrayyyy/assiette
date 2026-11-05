@@ -6,6 +6,7 @@ import { rankBadge } from './badges.js';
 import { exerciseFigure, viewFor } from './figure.js';
 import { mountExercise3D } from './figure3d.js';
 import { initCoach, coachSection, coachAction, coachNext } from './coach.js';
+import { burst, pulse } from './fx.js';
 import { bodyDiagram } from './body.js';
 import {
   MUSCLES, muscleLabel, PROGRAMS, RANKS, rankFor, LIFTS, LEVELS, strengthLevel,
@@ -1035,6 +1036,12 @@ document.addEventListener('click', async (e) => {
       }
       save();
       renderSession();
+      // Série validée : éclat autour de la coche (doré si c'est un record).
+      if (s.done) {
+        const btn = $session.querySelector(`[data-wact="set-done"][data-i="${i}"][data-j="${j}"]`);
+        burst(btn, s.pr ? { colors: ['#ffd25e', '#ffb347', '#fff'], count: 22, spread: 70, size: 7 } : { count: 10, spread: 34, size: 5 });
+        if (ex.sets.every((x) => x.done)) setTimeout(() => pulse(btn?.closest('.ex-card'), 'fx-glow', 900), 200);
+      }
       wui.justDone = '';
       break;
     }

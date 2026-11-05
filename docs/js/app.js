@@ -19,6 +19,7 @@ import { checkTrophies, trophyCount, TROPHIES } from './trophies.js';
 import { recapBanner } from './recap.js';
 import { initBodyLog, bodyCard } from './bodylog.js';
 import { initRewards, checkRewards, questCard, levelInfo, levelTitle } from './rewards.js';
+import { burst, flyTo, pulse, rollNumber } from './fx.js';
 import './timer.js';
 import { initWorkout, workoutTabView, sessionAccessory } from './workout.js';
 
@@ -87,9 +88,88 @@ function renderApp() {
   }
   shownView = view;
   if (state.profile) {
+    playFx();
     checkPerfect();
     checkTrophies();
     checkRewards();
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Effets de récompense après un rendu
+// ---------------------------------------------------------------------------
+
+const remainingOn = (day) => targets().kcal + burnedOn(day) - totalsOn(day).kcal;
+
+/** Avant d'ajouter un aliment : on retient d'où part la lumière et la valeur à faire défiler. */
+function markAdd(el) {
+  const r = el?.getBoundingClientRect();
+  ui.pendingAdd = { from: r ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null, before: remainingOn(ui.day), day: ui.day };
+}
+
+function playFx() {
+  // Aliment ajouté : la lumière file vers les anneaux (ou vers l'onglet Aujourd'hui), puis le compteur défile.
+  const add = ui.pendingAdd;
+  ui.pendingAdd = null;
+  if (add?.from) {
+    const rings = ui.tab === 'today' ? $app.querySelector('.hero .rings') : null;
+    const target = rings || $app.querySelector('.tab[data-tab="today"]');
+    const num = rings ? $app.querySelector('.rings-center b') : null;
+    const after = remainingOn(add.day);
+    if (num) num.textContent = Math.round(Math.abs(add.before)).toLocaleString('fr-FR');
+    flyTo(add.from, target, {
+      onArrive: () => {
+        burst(target, { count: rings ? 16 : 10, spread: rings ? 70 : 34 });
+        pulse(target, rings ? 'fx-glow' : 'fx-tab', 800);
+        if (num) rollNumber(num, Math.abs(add.before), Math.abs(after));
+        haptic(12);
+      },
+    });
+  }
+
+  // Objectif atteint : l'anneau brille et s'illumine en particules, une fois par jour.
+  if (ui.tab === 'today' && ui.day === dayKey()) {
+    const g = targets();
+    const t = totalsOn(ui.day);
+    const day = (state.daily ||= {})[ui.day] ||= {};
+    const fx = (day.fx ||= {});
+    const hits = [
+      ['kcal', t.kcal >= (g.kcal + burnedOn(ui.day)) * 0.95, ['#ffb347', '#ff5e62', '#ffd25e', '#fff'], 0],
+      ['protein', g.protein > 0 && t.protein >= g.protein * 0.95, ['#7fa6ff', '#3d5afe', '#ffd25e', '#fff'], 1],
+      ['fiber', g.fiber > 0 && t.fiber >= g.fiber * 0.95, ['#7ee0a8', '#12a06b', '#ffd25e', '#fff'], 2],
+    ];
+    hits.forEach(([key, hit, colors, i]) => {
+      if (!hit || fx[key]) return;
+      fx[key] = true;
+      save();
+      setTimeout(() => {
+        const layerEl = $app.querySelectorAll('.hero .ring-layer')[i];
+        if (!layerEl) return;
+        burst(layerEl, { colors, count: 22, spread: 90, size: 7 });
+        pulse(layerEl, 'fx-glow', 900);
+        tone([784, 1047, 1319], 0.06, 0.1);
+        haptic([20, 30, 40]);
+      }, add ? 1500 : 900);
+    });
+  }
+
+  // Série qui grimpe : la flamme s'embrase.
+  const s = streak();
+  if (ui.lastStreak != null && s > ui.lastStreak) {
+    const pill = $app.querySelector('.streak');
+    if (pill) {
+      setTimeout(() => {
+        pulse(pill, 'fx-flame', 1000);
+        burst(pill, { colors: ['#ff6a4d', '#ffb347', '#ffd25e'], count: 12, spread: 36, size: 5 });
+      }, 400);
+    }
+  }
+  ui.lastStreak = s;
+
+  // Changement d'onglet : l'icône rebondit.
+  if (ui.tabFx) {
+    ui.tabFx = false;
+    pulse($app.querySelector('.tab.active'), 'fx-tab', 500);
   }
 }
 
@@ -1213,6 +1293,7 @@ document.addEventListener('click', (e) => {
       break;
     case 'copy-meal': {
       const prev = entriesOn(shiftDay(ui.day, -1)).filter((x) => x.meal === el.dataset.meal && x.items[0]?.source !== 'supp');
+      markAdd(el);
       prev.forEach(({ id, createdAt, photo, ...entry }) => addEntry({ ...structuredClone(entry), day: ui.day }));
       renderApp();
       toast('Repris comme hier', 'copy');
@@ -1233,6 +1314,7 @@ document.addEventListener('click', (e) => {
         break;
       }
       const name = (sh.draft.name || '').trim() || 'Ajout rapide';
+      markAdd(el);
       addEntry({ day: ui.day, meal: sh.meal, title: name, items: [{ name, grams: 100, per100: { kcal: num('kcal'), protein: num('protein'), carbs: num('carbs'), fat: num('fat'), fiber: num('fiber') }, source: 'quick' }] });
       closeSheet();
       ui.tab = 'today';
@@ -1241,6 +1323,7 @@ document.addEventListener('click', (e) => {
       break;
     }
     case 'tab':
+      ui.tabFx = ui.tab !== el.dataset.tab;
       ui.tab = el.dataset.tab;
       ui.animate = ui.tab === 'today';
       renderApp();
@@ -1443,6 +1526,7 @@ document.addEventListener('click', (e) => {
         closeSheet();
         renderScan();
       } else {
+        markAdd(el);
         addEntry({ day: ui.day, meal: sh.meal, title: foodTitle(f), items: [{ name: f.name, brand: f.brand, grams: sh.grams, per100: f.per100, source: f.source }] });
         closeSheet();
         renderApp();

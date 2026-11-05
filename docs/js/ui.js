@@ -187,7 +187,7 @@ export function ring(progress, colors, size, width, { showEmpty = true, animate 
 export function macroRings(t, g, size, width, animate) {
   const gap = width + 5;
   const one = (value, target, colors, inset) =>
-    `<div class="ring-layer" style="inset:${inset}px">${ring(value / Math.max(target, 1), colors, size - inset * 2, width, { animate })}</div>`;
+    `<div class="ring-layer ${target > 0 && value >= target * 0.95 ? 'done' : ''}" style="inset:${inset}px;--glow:${colors[1]}">${ring(value / Math.max(target, 1), colors, size - inset * 2, width, { animate })}</div>`;
   return `<div class="rings" style="width:${size}px;height:${size}px">
     ${one(t.kcal, g.kcal, COLORS.kcal, 0)}
     ${one(t.protein, g.protein, COLORS.protein, gap)}

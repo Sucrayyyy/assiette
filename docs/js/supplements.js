@@ -4,6 +4,7 @@ import { esc, icon, haptic, tone, toast, confetti } from './ui.js';
 import { act, openPanel, refreshPanel, closePanel, panelHead } from './panel.js';
 import { PUSH_URL, VAPID_PUBLIC } from './config.js';
 import './reminder-copy.js';
+import { burst } from './fx.js';
 
 // Compléments courants : doses indicatives, à ajuster selon ton produit.
 const CATALOG = [
@@ -133,6 +134,7 @@ function toggle(id, day) {
   }
   syncReminders();
   rerender();
+  if (log[id]) burst(document.querySelector(`[data-x="supp-toggle"][data-id="${id}"] .ck`), { count: 12, spread: 38, size: 5 });
 }
 
 // ---------------------------------------------------------------------------
