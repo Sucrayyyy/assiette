@@ -1279,3 +1279,125 @@ body.splashing { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .fx-pulse, .fx-bump, .fx-glow, .fx-flame, .fx-tab svg, .set-row.done.pop, .bar-fill::after { animation: none !important; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Calorimètre : le mini-jeu des calories                              */
+/* ------------------------------------------------------------------ */
+.game-card { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 22px; width: 100%; text-align: left; }
+.game-card b { display: block; font-size: 16px; }
+.game-card small { display: block; font-size: 12.5px; color: var(--muted); }
+.gc-icon { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; flex-shrink: 0; color: #fff; background: linear-gradient(135deg, #ffb347, #ff5e62); box-shadow: 0 6px 16px rgba(255, 94, 98, 0.35); }
+.game-card.done .gc-icon { background: linear-gradient(135deg, var(--accent), var(--accent-deep)); box-shadow: 0 6px 16px rgba(var(--accent-rgb), 0.35); }
+.gc-play { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--on-accent); flex-shrink: 0; }
+.gc-play svg { width: 18px; height: 18px; }
+
+.game-layer { position: fixed; inset: 0; z-index: 70; background: var(--mesh); overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; animation: fadein 0.25s ease; }
+.game-layer.out { opacity: 0; transition: opacity 0.28s; }
+.game-top { display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 12px; padding: calc(var(--safe-top) + 12px) 16px 6px; }
+.game-top .round { background: var(--glass-bg); border: 1px solid var(--glass-border); }
+.game-dots { display: flex; justify-content: center; gap: 6px; }
+.game-dots i { width: 26px; height: 6px; border-radius: 3px; background: var(--field); box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.15); transition: background 0.3s; }
+.game-dots i.done { background: var(--accent); box-shadow: none; }
+.game-dots i.now { background: rgba(var(--accent-rgb), 0.45); box-shadow: none; }
+.game-score { font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+.game-score b { font-size: 18px; margin-right: 3px; }
+
+.game-body, .game-end { width: 100%; max-width: 480px; margin: 0 auto; padding: 8px 20px calc(var(--safe-bottom) + 24px); display: flex; flex-direction: column; gap: 16px; }
+.game-body.enter > * { animation: gameIn 0.42s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.game-body.enter > :nth-child(2) { animation-delay: 0.05s; }
+.game-body.enter > :nth-child(3) { animation-delay: 0.1s; }
+@keyframes gameIn { from { opacity: 0; transform: translateX(40px); } }
+.game-kicker { text-align: center; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+
+.food-card { position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 26px 20px 22px; border-radius: 30px; text-align: center; color: #fff;
+  background: linear-gradient(155deg, var(--c1), var(--c2)); box-shadow: 0 18px 40px -12px var(--c2); transition: padding 0.35s, border-radius 0.35s; }
+.food-card::before { content: ''; position: absolute; inset: 0; background: radial-gradient(90% 60% at 20% 0%, rgba(255, 255, 255, 0.35), transparent 60%); pointer-events: none; }
+.food-card > * { position: relative; }
+.fc-icon { width: 76px; height: 76px; border-radius: 26px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.2); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3); margin-bottom: 4px; }
+.fc-icon svg { width: 42px; height: 42px; }
+.fc-cat { font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.85; }
+.fc-name { font-size: 28px; font-weight: 900; line-height: 1.1; letter-spacing: -0.02em; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.18); }
+.fc-portion { font-size: 14.5px; font-weight: 700; padding: 5px 12px; border-radius: 999px; background: rgba(0, 0, 0, 0.16); }
+.food-card.flipped { display: grid; grid-template-columns: auto 1fr; column-gap: 14px; row-gap: 2px; align-items: center; justify-items: start; text-align: left; padding: 14px 16px; border-radius: 24px; }
+.food-card.flipped .fc-icon { grid-row: span 3; width: 54px; height: 54px; border-radius: 18px; margin: 0; }
+.food-card.flipped .fc-icon svg { width: 30px; height: 30px; }
+.food-card.flipped .fc-name { font-size: 20px; }
+.food-card.flipped .fc-portion { font-size: 12.5px; padding: 3px 9px; }
+
+.guess { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.guess-q { margin: 4px 0 0; font-size: 19px; font-weight: 800; text-align: center; }
+.guess-value { display: flex; align-items: baseline; gap: 6px; font-variant-numeric: tabular-nums; }
+.guess-value b, .reveal-value b { font-size: 64px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; color: var(--accent); }
+.guess-value span, .reveal-value span { font-size: 18px; font-weight: 700; color: var(--muted); }
+.guess-value.empty b { color: var(--muted); opacity: 0.45; }
+.guess-range { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; background: transparent; margin: 0; touch-action: pan-y; }
+.guess-range::-webkit-slider-runnable-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #4fcf8a, #f5c542 45%, #ff8a3d 75%, #e5484d); }
+.guess-range::-moz-range-track { height: 12px; border-radius: 6px; background: linear-gradient(90deg, #4fcf8a, #f5c542 45%, #ff8a3d 75%, #e5484d); }
+.guess-range::-webkit-slider-thumb { -webkit-appearance: none; width: 34px; height: 34px; margin-top: -11px; border-radius: 50%; background: #fff; border: 3px solid var(--accent); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
+.guess-range::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 3px solid var(--accent); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25); }
+.guess-scale { width: 100%; display: flex; justify-content: space-between; margin-top: -8px; font-size: 11.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.guess-nudge { display: flex; gap: 10px; justify-content: center; }
+.guess-nudge .round { width: auto; height: 40px; padding: 0 16px; border-radius: 999px; background: var(--glass-bg); border: 1px solid var(--glass-border); font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
+.guess .btn { margin-top: 4px; }
+
+.reveal { display: flex; flex-direction: column; gap: 12px; }
+.reveal-value { display: flex; align-items: baseline; justify-content: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.reveal-gauge { position: relative; height: 14px; margin: 22px 4px 4px; border-radius: 7px; background: var(--field); box-shadow: inset 0 0 0 1px rgba(127, 127, 127, 0.15); }
+.rg-fill { position: absolute; left: 0; top: 0; bottom: 0; width: var(--w); border-radius: 7px; background: linear-gradient(90deg, rgba(var(--accent-rgb), 0.6), var(--accent)); animation: rgGrow 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@keyframes rgGrow { from { width: 0; } }
+.rg-mark { position: absolute; left: var(--x); top: -6px; bottom: -6px; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--ink); animation: fadein 0.3s 0.5s both; }
+.rg-mark em { position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%); font-style: normal; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap; }
+.reveal-verdict { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 4px; animation: fadein 0.3s 0.9s both; }
+.reveal-verdict b { font-size: 24px; font-weight: 900; }
+.rv-pts { padding: 4px 12px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-weight: 900; font-size: 16px; font-variant-numeric: tabular-nums; }
+.reveal-way { margin: -4px 0 0; text-align: center; font-weight: 700; color: var(--accent); animation: fadein 0.3s 1s both; }
+.reveal-verdict.more ~ .reveal-way { color: #e5603f; }
+.reveal-eq, .reveal-fact { display: flex; gap: 10px; align-items: flex-start; margin: 0; padding: 12px 14px; border-radius: 18px; background: var(--glass-bg); border: 1px solid var(--glass-border); font-size: 14.5px; line-height: 1.4; animation: gameIn 0.4s 1.05s both; }
+.reveal-fact { animation-delay: 1.15s; }
+.reveal-eq svg, .reveal-fact svg { flex-shrink: 0; width: 20px; height: 20px; color: var(--accent); margin-top: 1px; }
+.reveal .btn { margin-top: 4px; animation: fadein 0.3s 1.1s both; }
+
+.game-end { align-items: center; text-align: center; gap: 14px; padding-top: 24px; }
+.game-end.enter > * { animation: gameIn 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.end-stars { display: flex; gap: 8px; align-items: flex-end; }
+.end-stars i { color: var(--field); filter: drop-shadow(0 0 0 transparent); animation: starPop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) calc(0.5s + var(--k) * 0.18s) both; }
+.end-stars i svg { width: 44px; height: 44px; }
+.end-stars i:nth-child(2) svg { width: 58px; height: 58px; }
+.end-stars i.on { color: #f5c542; filter: drop-shadow(0 4px 12px rgba(245, 197, 66, 0.55)); }
+@keyframes starPop { from { transform: scale(0) rotate(-40deg); opacity: 0; } }
+.end-score { display: flex; align-items: baseline; gap: 8px; font-variant-numeric: tabular-nums; }
+.end-score b { font-size: 76px; font-weight: 900; letter-spacing: -0.04em; line-height: 1; color: var(--accent); }
+.end-score span { font-size: 18px; font-weight: 700; color: var(--muted); }
+.game-end h1 { font-size: 28px; }
+.end-record { padding: 6px 14px; border-radius: 999px; font-weight: 800; font-size: 13.5px; color: #4a3500; background: linear-gradient(135deg, #ffe08a, #f5c542); box-shadow: 0 6px 18px rgba(245, 197, 66, 0.4); }
+.end-surprises { width: 100%; text-align: left; padding: 14px 16px 6px; border-radius: 22px; background: var(--glass-bg); border: 1px solid var(--glass-border); }
+.end-surprises small { display: block; font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.es-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; font-weight: 700; }
+.es-row em { display: block; font-style: normal; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.es-row + .es-row { border-top: 1px solid rgba(127, 127, 127, 0.15); }
+.es-row b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.es-row b.more { color: #e5603f; }
+.es-row b.less { color: var(--accent); }
+.end-actions { width: 100%; display: flex; flex-direction: column; gap: 10px; align-items: center; margin-top: 4px; }
+.end-actions .btn.glass { background: var(--glass-bg); border: 1px solid var(--glass-border); }
+
+.duel-streak { justify-self: center; display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 999px; background: var(--glass-bg); border: 1px solid var(--glass-border); font-weight: 900; font-size: 18px; font-variant-numeric: tabular-nums; }
+.duel-streak svg { color: #ff6a4d; }
+.duel-cards { display: flex; flex-direction: column; align-items: stretch; }
+.duel-card { position: relative; width: 100%; border-radius: 30px; transition: transform 0.3s, opacity 0.3s, filter 0.3s; }
+.duel-card .food-card { padding: 20px 18px 18px; }
+.duel-card .fc-icon { width: 60px; height: 60px; border-radius: 20px; }
+.duel-card .fc-icon svg { width: 34px; height: 34px; }
+.duel-card .fc-name { font-size: 24px; }
+.duel-vs { position: relative; z-index: 2; align-self: center; width: 46px; height: 46px; margin: -14px 0; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-size: 14px; letter-spacing: 0.04em; background: var(--sheet-bg); border: 1px solid var(--glass-border); box-shadow: var(--glass-shadow); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.duel-card:disabled { opacity: 1; }
+.duel-card.win .food-card { box-shadow: 0 0 0 3px #fff, 0 0 0 6px var(--c2), 0 18px 40px -8px var(--c2); }
+.duel-card.lose { opacity: 0.5; transform: scale(0.96); filter: saturate(0.4); }
+.duel-kcal { position: absolute; top: 12px; right: 14px; z-index: 2; padding: 5px 12px; border-radius: 999px; background: rgba(0, 0, 0, 0.28); color: #fff; font-weight: 700; font-size: 14px; font-variant-numeric: tabular-nums; animation: starPop 0.4s cubic-bezier(0.3, 1.6, 0.5, 1) both; }
+.duel-kcal b { font-size: 18px; font-weight: 900; }
+.fx-shake { animation: fxShake 0.45s ease; }
+@keyframes fxShake { 20%, 60% { translate: -8px 0; } 40%, 80% { translate: 8px 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .game-layer, .game-body.enter > *, .game-end.enter > *, .rg-fill, .rg-mark, .reveal-verdict, .reveal-way, .reveal-eq, .reveal-fact, .reveal .btn, .end-stars i, .duel-kcal, .fx-shake { animation: none !important; }
+}

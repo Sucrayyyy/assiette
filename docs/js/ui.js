@@ -83,6 +83,8 @@ export const icon = {
   arrowUpRight: svg('<path d="M7 17 17 7M8 7h9v9"/>'),
   heart: svg('<path d="M12 20s-7-4.5-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.5-9 9-9 9z"/>'),
   wave: svg('<path d="M2 12h3l3-7 4 14 3-9 2 2h5"/>'),
+  star: `<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2.8l2.8 5.8 6.3.9-4.6 4.4 1.1 6.3L12 17.2l-5.6 3 1.1-6.3-4.6-4.4 6.3-.9z"/></svg>`,
+  gauge: svg('<path d="M3.5 16a8.5 8.5 0 1 1 17 0"/><path d="M12 16l4-5"/><circle cx="12" cy="16" r="1.4"/><path d="M6 12.5l1 .6M12 7.5v1.2M18 12.5l-1 .6"/>'),
 };
 
 // Retour haptique : le vibreur sur Android. Sur iPhone, les apps web n'y ont pas accès, sauf à travers

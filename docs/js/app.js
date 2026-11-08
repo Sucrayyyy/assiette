@@ -20,6 +20,7 @@ import { recapBanner } from './recap.js';
 import { initBodyLog, bodyCard } from './bodylog.js';
 import { initRewards, checkRewards, questCard, levelInfo, levelTitle } from './rewards.js';
 import { burst, flyTo, pulse, rollNumber } from './fx.js';
+import { initGame, gameCard } from './game.js';
 import './timer.js';
 import { initWorkout, workoutTabView, sessionAccessory } from './workout.js';
 
@@ -223,6 +224,7 @@ function todayView() {
     ${recapBanner()}
     ${homeOn('week') ? weekView() : ''}
     ${homeOn('quests') ? questCard(ui.day) : ''}
+    ${homeOn('game') ? gameCard(ui.day) : ''}
     <section class="hero glass">
       <div class="hero-top">
         <div style="position:relative">
@@ -1737,6 +1739,7 @@ initModules({ renderApp });
 initSupplements({ renderApp });
 initBodyLog({ renderApp });
 initRewards({ renderApp });
+initGame({ renderApp });
 
 // Glisser vers la droite ou la gauche pour changer de jour.
 bindSwipe(() => (state.profile && ui.tab === 'today' && !ui.sheet ? $app : null), (dir) => {

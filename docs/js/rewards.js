@@ -120,6 +120,7 @@ function flags(day) {
     supps: dueOn(day).length > 0 && allTakenOn(day),
     workout: state.workouts.some((w) => dayKey(new Date(w.end)) === day),
     perfect: !!state.perfectDays?.[day],
+    quiz: !!state.game?.daily?.[day]?.done,
   };
 }
 
@@ -137,6 +138,7 @@ const QUESTS = {
   steps: { text: 'Marche 8 000 pas', ico: 'steps', xp: 40, module: 'steps' },
   supps: { text: 'Coche tous tes compléments', ico: 'pill', xp: 30, module: 'supps', needSupps: true },
   workout: { text: 'Fais une séance de muscu', ico: 'dumbbell', xp: 60 },
+  quiz: { text: 'Joue au Calorimètre', ico: 'gauge', xp: 30, module: 'game' },
 };
 
 // Tirage du jour, toujours le même pour une date donnée.

@@ -210,6 +210,7 @@ document.addEventListener('change', (e) => {
 
 const HOME_MODULES = [
   ['quests', 'Défis du jour', 'Trois défis et un coffre chaque jour', 'trophy'],
+  ['game', 'Calorimètre', 'Le mini-jeu : devine les calories', 'gauge'],
   ['week', 'Semaine', 'Les 7 derniers jours en haut de l\'écran', 'calendar'],
   ['score', 'Score du jour', 'Tes objectifs cochés, journée parfaite', 'flag'],
   ['steps', 'Pas', 'Compteur et calories brûlées', 'steps'],

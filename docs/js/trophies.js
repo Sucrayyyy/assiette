@@ -53,6 +53,10 @@ function collect() {
     waterDays: Object.values(state.water || {}).filter((ml) => ml >= waterGoal()).length,
     suppRun: longestRun(suppDays),
     perfect: Object.keys(state.perfectDays || {}).length,
+    quizDays: Object.values(state.game?.daily || {}).filter((d) => d.done).length,
+    quizBest: state.game?.best?.daily || 0,
+    duelBest: state.game?.best?.duel || 0,
+    quizPerfects: state.game?.perfects || 0,
   };
 }
 
@@ -92,6 +96,15 @@ export const TROPHIES = [
   { id: 'supp-30', cat: 'Au quotidien', name: 'Réglé comme une horloge', desc: 'Compléments pris 30 jours de suite', tier: 'or', ico: 'pill', stat: 'suppRun', goal: 30 },
   { id: 'perfect-1', cat: 'Au quotidien', name: 'Journée parfaite', desc: 'Tous tes objectifs en un jour', tier: 'argent', ico: 'checkCircle', stat: 'perfect', goal: 1 },
   { id: 'perfect-10', cat: 'Au quotidien', name: 'Sans faute', desc: '10 journées parfaites', tier: 'platine', ico: 'checkCircle', stat: 'perfect', goal: 10 },
+
+  { id: 'quiz-1', cat: 'Calorimètre', name: 'Curieux', desc: 'Termine ton premier défi du jour', tier: 'bronze', ico: 'gauge', stat: 'quizDays', goal: 1 },
+  { id: 'quiz-7', cat: 'Calorimètre', name: 'Fidèle au poste', desc: '7 défis du jour terminés', tier: 'argent', ico: 'gauge', stat: 'quizDays', goal: 7 },
+  { id: 'quiz-30', cat: 'Calorimètre', name: 'Encyclopédie', desc: '30 défis du jour terminés', tier: 'or', ico: 'book', stat: 'quizDays', goal: 30 },
+  { id: 'quiz-400', cat: 'Calorimètre', name: 'Œil affûté', desc: '400 points en un défi', tier: 'argent', ico: 'target', stat: 'quizBest', goal: 400 },
+  { id: 'quiz-470', cat: 'Calorimètre', name: 'Balance humaine', desc: '470 points en un défi', tier: 'platine', ico: 'scale', stat: 'quizBest', goal: 470 },
+  { id: 'quiz-perfect-10', cat: 'Calorimètre', name: 'Dans le mille', desc: '10 réponses parfaites', tier: 'or', ico: 'star', stat: 'quizPerfects', goal: 10 },
+  { id: 'duel-10', cat: 'Calorimètre', name: 'Duelliste', desc: '10 bonnes réponses d\'affilée en duel', tier: 'argent', ico: 'bolt', stat: 'duelBest', goal: 10 },
+  { id: 'duel-25', cat: 'Calorimètre', name: 'Imbattable', desc: '25 bonnes réponses d\'affilée en duel', tier: 'or', ico: 'bolt', stat: 'duelBest', goal: 25 },
 ];
 
 export const medal = (t, locked = false, size = 64) =>

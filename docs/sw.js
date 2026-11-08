@@ -1,7 +1,7 @@
 // Garde l'app disponible hors connexion (la recherche en ligne a besoin d'internet) et affiche les rappels.
 importScripts('./js/reminder-copy.js');
 
-const CACHE = 'assiette-v12';
+const CACHE = 'assiette-v13';
 const DATA = 'assiette-data';
 const SHELL = [
   './',
@@ -38,6 +38,7 @@ const SHELL = [
   './js/coach.js',
   './js/rewards.js',
   './js/fx.js',
+  './js/game.js',
   './icons/apple-touch-icon.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
